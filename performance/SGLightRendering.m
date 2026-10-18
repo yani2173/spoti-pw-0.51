@@ -24,6 +24,7 @@ static NSHashTable *visualizers;
 static NSHashTable *artworkHosts;
 static char visualizerKey;
 static char visibilityKey;
+static char readyHandoffKey;
 static void (*setRunningOriginal)(id, SEL, BOOL);
 static void (*updateLinkOriginal)(id, SEL);
 
@@ -55,7 +56,7 @@ static BOOL installArtworkVisibility(Class cls, BOOL hasClear) {
         if (NSThread.isMainThread) {
             visibilityState(view, original).requestedShown = requested;
             requested = requested && !light;
-            animated = animated && !light;
+            animated = animated && !light && !objc_getAssociatedObject(view, &readyHandoffKey);
         }
         // The core's hide path updates coversChanged/shownChanged, restoring the
         // current song's native artwork as well as hiding the animated layer.
@@ -135,7 +136,8 @@ static void installObjectAnimation(Class cls, NSString *name) {
     if (!SGPerfHasMethod(cls, selector, 'v', "@B")) return;
     void (*original)(id, SEL, id, BOOL) = (void *)method_getImplementation(class_getInstanceMethod(cls, selector));
     IMP wrapper = imp_implementationWithBlock(^(id view, id value, BOOL animated) {
-        original(view, selector, value, animate(animated));
+        original(view, selector, value,
+                 NSThread.isMainThread && selector == sel_registerName("setArtwork:animated:") ? NO : animate(animated));
     });
     SGPerfReplaceMethod(cls, selector, wrapper);
 }
@@ -171,14 +173,14 @@ void SGInstallLightRendering(BOOL lightMode, BOOL inactive, BOOL interactionBusy
 
         Class warp = NSClassFromString(@"SGRWarpLayer");
         installObjectAnimation(warp, @"setArtwork:animated:");
-        // An artwork conversion queued before Light mode may finish afterwards. Clamp
-        // its pending fade at consumption as well, keeping the newly decoded artwork.
+        // Song handoffs must not blend two expensive background frames while lyrics
+        // and progress initialize. Also clamp conversions queued before installation.
         Ivar pending = class_getInstanceVariable(warp, "_pendingAnimated");
         if (pending && SGPerfTypeMatches(ivar_getTypeEncoding(pending)[0], 'B') &&
             [warp accessInstanceVariablesDirectly] && SGPerfHasMethod(warp, sel_registerName("takePending"), 'v', "")) {
             void (*original)(id, SEL) = (void *)method_getImplementation(class_getInstanceMethod(warp, sel_registerName("takePending")));
             IMP wrapper = imp_implementationWithBlock(^(id layer) {
-                if (NSThread.isMainThread && light) [layer setValue:@NO forKey:@"pendingAnimated"];
+                if (NSThread.isMainThread) [layer setValue:@NO forKey:@"pendingAnimated"];
                 original(layer, sel_registerName("takePending"));
             });
             SGPerfReplaceMethod(warp, sel_registerName("takePending"), wrapper);
@@ -207,11 +209,19 @@ void SGInstallLightRendering(BOOL lightMode, BOOL inactive, BOOL interactionBusy
             SGPerfHasMethod(cover, sel_registerName("fadeIn:generation:"), 'v', "@Q")) {
             void (*original)(id, SEL, id, uint64_t) = (void *)method_getImplementation(class_getInstanceMethod(cover, sel_registerName("fadeIn:generation:")));
             IMP wrapper = imp_implementationWithBlock(^(id view, id clip, uint64_t revision) {
-                if (NSThread.isMainThread && light && clip &&
+                BOOL handoff = NSThread.isMainThread && clip &&
                     ((id (*)(id, SEL))objc_msgSend)(view, sel_registerName("clip")) == clip &&
-                    [[view valueForKey:@"generation"] unsignedLongLongValue] == revision)
+                    [[view valueForKey:@"generation"] unsignedLongLongValue] == revision;
+                id previousHandoff = handoff ? objc_getAssociatedObject(view, &readyHandoffKey) : nil;
+                if (handoff) {
+                    objc_setAssociatedObject(view, &readyHandoffKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
                     ((void (*)(id, SEL))objc_msgSend)(view, sel_registerName("dropLeaving"));
-                original(view, sel_registerName("fadeIn:generation:"), clip, revision);
+                }
+                @try {
+                    original(view, sel_registerName("fadeIn:generation:"), clip, revision);
+                } @finally {
+                    if (handoff) objc_setAssociatedObject(view, &readyHandoffKey, previousHandoff, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+                }
             });
             SGPerfReplaceMethod(cover, sel_registerName("fadeIn:generation:"), wrapper);
         }
