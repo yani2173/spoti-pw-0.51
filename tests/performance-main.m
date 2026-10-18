@@ -4,6 +4,36 @@
 #import <objc/runtime.h>
 #import <CoreFoundation/CoreFoundation.h>
 
+@implementation UIView
+@end
+@implementation UIViewController
+- (void)presentViewController:(UIViewController *)controller animated:(BOOL)animated completion:(void (^)(void))completion {
+    (void)animated; self.presentedViewController = controller; if (completion) completion();
+}
+- (void)dismissViewControllerAnimated:(BOOL)animated completion:(void (^)(void))completion {
+    (void)animated; self.presentedViewController = nil; if (completion) completion();
+}
+@end
+@implementation UIAlertAction
++ (instancetype)actionWithTitle:(NSString *)title style:(UIAlertActionStyle)style handler:(void (^)(UIAlertAction *))handler {
+    (void)title; (void)style; UIAlertAction *action = [self new]; action.handler = handler; return action;
+}
+@end
+@implementation UIAlertController
++ (instancetype)alertControllerWithTitle:(NSString *)title message:(NSString *)message preferredStyle:(UIAlertControllerStyle)style {
+    (void)title; (void)message; (void)style;
+    UIAlertController *alert = [self new]; alert.actions = [NSMutableArray new]; return alert;
+}
+- (void)addAction:(UIAlertAction *)action { [self.actions addObject:action]; }
+@end
+@interface SGOnboardingController : UIViewController
+@property(nonatomic) NSUInteger finishes;
+- (void)finish;
+@end
+@implementation SGOnboardingController
+- (void)finish { self.finishes++; }
+@end
+
 static void require(BOOL condition, const char *message);
 static BOOL nilFactory;
 @implementation SGTestProcessInfo
@@ -255,6 +285,36 @@ int main(int argc, const char *argv[]) {
             CADisplayLink *link = [CADisplayLink displayLinkWithTarget:ticker selector:@selector(tick:)];
             require(link.target == ticker, "a ticker with an unsupported ABI is left untouched");
             puts("PASS: unsupported ticker signature guard");
+            return 0;
+        }
+        if (argc > 1 && (strcmp(argv[1], "setup-light") == 0 || strcmp(argv[1], "setup-normal") == 0)) {
+            BOOL light = strcmp(argv[1], "setup-light") == 0;
+            NSUserDefaults *store = NSUserDefaults.standardUserDefaults;
+            [store removeObjectForKey:@"spotifyglass.performance.lightModeOffered"];
+            SGInstallPerformance();
+            SGOnboardingController *setup = [SGOnboardingController new];
+            setup.viewIfLoaded = [UIView new];
+            setup.viewIfLoaded.window = [NSObject new];
+            [setup finish];
+            UIAlertController *offer = (id)setup.presentedViewController;
+            require(offer.actions.count == 2 && setup.finishes == 0, "first setup offers both modes before finishing");
+            [setup finish];
+            require(setup.presentedViewController == offer && setup.finishes == 0, "repeated finish cannot bypass the open offer");
+            UIAlertAction *choice = offer.actions[light ? 0 : 1];
+            choice.handler(choice);
+            require(setup.finishes == 1 && !setup.presentedViewController, "choice dismisses the offer and finishes exactly once");
+            require([store boolForKey:SGPerformanceLightModeKey] == light, "setup saves the selected mode");
+            [setup finish];
+            require(setup.finishes == 2 && !setup.presentedViewController, "saved choice is not requested again");
+            [store removeObjectForKey:@"spotifyglass.performance.lightModeOffered"];
+            [store setBool:NO forKey:SGPerformanceLightModeKey];
+            [setup finish];
+            require(setup.finishes == 3 && !setup.presentedViewController, "explicit existing normal preference is respected");
+            [store removeObjectForKey:SGPerformanceLightModeKey];
+            setup.viewIfLoaded.window = nil;
+            [setup finish];
+            require(setup.finishes == 4, "invisible setup cannot be blocked by an unpresentable offer");
+            puts("PASS: first setup mode choice and continuation");
             return 0;
         }
         if (argc > 1) {

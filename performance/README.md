@@ -332,3 +332,30 @@ Runtime regressions cover visible/cached/late clips, track changes, clear while 
 manual/automatic startup and recovery, weak lifetime, nested policy updates and unsupported ABI.
 They use stand-in hosts with the verified show/clear semantics; actual artwork appearance still
 requires verification on the phone after rebuilding the optimized IPA.
+
+## Song handoffs in normal mode and first setup
+
+Song artwork updates now use the original nonanimated warp-background path in both modes,
+including delayed `takePending` conversions. A current, generation-validated animated cover
+readiness callback drops leaving video layers before forwarding `fadeIn:generation:` in both
+modes. Only its synchronous `show:animated:` receives `animated:NO`; unrelated presentation
+animations and steady-state animated covers remain enabled in normal mode. The previous
+handoff marker is restored after forwarding, including nested callbacks. Stale callbacks do not
+remove layers. This removes overlapping background/video fades during song initialization;
+it does not pause lyrics, change progress clocks, cap FPS, or enable Light mode implicitly.
+These paths use the same pinned-binary ABI evidence documented above.
+
+The actual `SGOnboardingController.finish` (`0x45348`, `v16@0:8`) saves setup and may restart
+the app. A guarded subclass hook now offers **Use Light mode** and **Keep normal mode** before
+that original method runs. The public UIKit alert dismisses before continuing setup exactly once.
+An existing explicit manual preference is respected, and either choice records
+`spotifyglass.performance.lightModeOffered` so later setup does not ask repeatedly. An invisible
+controller, another modal or an unsupported signature passes through. No launch-time alert is
+added for existing users. The installer checks UIViewController ancestry and the method signature.
+
+Regression coverage includes normal-mode immediate/delayed artwork, current and stale video
+readiness, later presentation animations, both setup choices, duplicate finish taps, persistence,
+existing preferences and an invisible setup controller. `make test` covers packaging and original
+core timing; macOS stand-ins and the arm64 build run in the performance workflow. These checks
+cannot establish device FPS or prove that all preview/progress stutter is eliminated. Test automatic
+advance, rapid next/previous, first play and cached replay with Light mode off on an iPhone.

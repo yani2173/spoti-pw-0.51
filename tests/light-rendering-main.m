@@ -218,7 +218,7 @@ int main(int argc, const char **argv) {
         SGRPlayerVisualizerHost *host = [SGRPlayerVisualizerHost new];
         TestDecorations *other = [TestDecorations new];
         [warp setArtwork:@"first" animated:YES];
-        check(warp.animated, "normal artwork animation is preserved");
+        check(!warp.animated && [warp.payload isEqual:@"first"], "normal song artwork updates without overlapping background fades");
         SGApplyLightRendering(YES, NO, NO);
         [warp setArtwork:@"new art" animated:YES];
         check(!warp.animated && [warp.payload isEqual:@"new art"], "artwork updates without a background crossfade");
@@ -256,10 +256,15 @@ int main(int argc, const char **argv) {
         check(!cover.animated, "owner-disabled animations stay disabled");
         warp.pendingAnimated = YES;
         [warp takePending];
-        check(warp.consumedAnimated, "pending artwork fades are preserved outside Light mode");
+        check(!warp.consumedAnimated, "late artwork also avoids overlapping fades in normal mode");
         cover.leaving = 1;
+        [cover fadeIn:@"obsolete" generation:10];
+        [cover fadeIn:cover.clip generation:9];
+        check(cover.leaving == 1, "normal mode also preserves layers for stale readiness");
         [cover fadeIn:cover.clip generation:10];
-        check(cover.leaving == 1 && cover.crossfades == 1, "normal clip crossfade behavior returns");
+        check(cover.leaving == 0 && cover.crossfades == 0 && cover.shown, "normal ready handoff shows new video without overlapping old players");
+        [cover show:YES animated:YES];
+        check(cover.animated, "handoff suppression does not leak into later presentation animations");
         cover.artwork = @"song A";
         [cover show:YES animated:NO];
         [host show:YES animated:NO];

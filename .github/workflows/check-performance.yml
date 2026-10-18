@@ -23,6 +23,8 @@ jobs:
           xcrun clang -fobjc-arc -DSG_PERFORMANCE_TEST -Wall -Wextra -Werror \
             tests/performance-main.m performance/SGPerformance.m performance/SGPerfSettings.m performance/SGLightRendering.m performance/SGLyricsTiming.m performance/SGLyricsIndex.c -framework Foundation -o out/performance-tests
           out/performance-tests
+          out/performance-tests setup-light
+          out/performance-tests setup-normal
           out/performance-tests inactive
           out/performance-tests background
           out/performance-tests unsupported-ticker

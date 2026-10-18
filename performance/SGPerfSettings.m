@@ -100,9 +100,57 @@ static void adoptSections(id<SGPerfSettingsPage> page, SEL cmd, NSArray *section
     sg_adopt(page, cmd, augmented);
 }
 
+// SGOnboardingController.finish is v16@0:8 at 0x45348 in the pinned core.
+// Offer the choice before the original finish saves setup and potentially restarts.
+static NSString *const sg_lightModeOfferedKey = @"spotifyglass.performance.lightModeOffered";
+static char sg_offerPendingKey;
+static void (*sg_finishSetup)(id, SEL);
+
+static void finishSetup(UIViewController *controller, SEL cmd) {
+    NSUserDefaults *store = NSUserDefaults.standardUserDefaults;
+    if (!NSThread.isMainThread || [store boolForKey:sg_lightModeOfferedKey] ||
+        [store objectForKey:SGPerformanceLightModeKey] || controller.presentedViewController ||
+        !controller.viewIfLoaded.window) {
+        // A second tap while our alert is open must not finish setup behind it.
+        if (NSThread.isMainThread && objc_getAssociatedObject(controller, &sg_offerPendingKey)) return;
+        sg_finishSetup(controller, cmd);
+        return;
+    }
+    objc_setAssociatedObject(controller, &sg_offerPendingKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"Choose your visual experience"
+        message:@"Light mode uses static song artwork and reduces visual effects to save power. Normal mode keeps animated effects. Music controls and synchronized lyrics work in both. You can change this later in Mod Settings → Performance."
+        preferredStyle:UIAlertControllerStyleAlert];
+    __weak UIViewController *weakController = controller;
+    void (^choose)(BOOL) = ^(BOOL lightMode) {
+        UIViewController *owner = weakController;
+        if (!owner) return;
+        SGSetLightMode(lightMode);
+        // Record even an explicit Normal choice; do not repeatedly ask on later setup.
+        [store setBool:YES forKey:sg_lightModeOfferedKey];
+        [owner dismissViewControllerAnimated:YES completion:^{
+            objc_setAssociatedObject(owner, &sg_offerPendingKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+            sg_finishSetup(owner, cmd);
+        }];
+    };
+    [alert addAction:[UIAlertAction actionWithTitle:@"Use Light mode" style:UIAlertActionStyleDefault
+        handler:^(UIAlertAction *action) { (void)action; choose(YES); }]];
+    [alert addAction:[UIAlertAction actionWithTitle:@"Keep normal mode" style:UIAlertActionStyleDefault
+        handler:^(UIAlertAction *action) { (void)action; choose(NO); }]];
+    [controller presentViewController:alert animated:YES completion:nil];
+}
+
+static void installSetupOffer(void) {
+    Class cls = NSClassFromString(@"SGOnboardingController");
+    SEL finish = sel_registerName("finish");
+    if (![cls isSubclassOfClass:UIViewController.class] || !SGPerfHasMethod(cls, finish, 'v', "")) return;
+    sg_finishSetup = (void *)method_getImplementation(class_getInstanceMethod(cls, finish));
+    SGPerfReplaceMethod(cls, finish, (IMP)finishSetup);
+}
+
 void SGInstallPerformanceSettings(void) {
     static dispatch_once_t once;
     dispatch_once(&once, ^{
+        installSetupOffer();
         Class pageClass = NSClassFromString(@"SGModPage");
         sg_rowClass = NSClassFromString(@"SGModRow");
         sg_sectionClass = NSClassFromString(@"SGModSection");
