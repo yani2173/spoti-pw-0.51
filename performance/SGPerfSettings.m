@@ -1,5 +1,6 @@
 #import "SGPerfSettings.h"
 #import "SGPerformance.h"
+#import "SGLyricEffects.h"
 #import "SGPerfABI.h"
 #ifdef SG_PERFORMANCE_TEST
 #import "../tests/PerformanceUIKitStubs.h"
@@ -82,6 +83,24 @@ static void adoptSections(id<SGPerfSettingsPage> page, SEL cmd, NSArray *section
         section.rows = @[row, automatic, status];
         section.footer = @"Manual Light mode stays on. Automatic mode restores effects after Low Power Mode ends and the phone cools down. Music controls and synchronized lyrics stay available.";
         [augmented addObject:section];
+        // The effects module follows the saved preference. The native row saves it before this
+        // callback; only a missing or different value is written here.
+        id<SGPerfSettingsRow> effects = [sg_rowClass new];
+        effects.title = @"Word effects";
+        effects.subtitle = @"Fire, ice, rain, hearts, sparkles and ten more themes on matching words as they are sung";
+        effects.key = SGLyricWordEffectsKey;
+        effects.defaultOn = YES;
+        effects.symbol = @"flame";
+        effects.changed = ^(BOOL on) {
+            NSUserDefaults *store = NSUserDefaults.standardUserDefaults;
+            if (![store objectForKey:SGLyricWordEffectsKey] || [store boolForKey:SGLyricWordEffectsKey] != on)
+                [store setBool:on forKey:SGLyricWordEffectsKey];
+        };
+        id<SGPerfSettingsSection> lyrics = [sg_sectionClass new];
+        lyrics.title = @"Lyrics";
+        lyrics.rows = @[effects];
+        lyrics.footer = @"Needs word-synced lyrics for per-word timing. Light mode turns the effects off, and Reduce Motion keeps only the colors.";
+        [augmented addObject:lyrics];
     }
     if (!hasCredit) {
         id<SGPerfSettingsRow> credit = [sg_rowClass new];

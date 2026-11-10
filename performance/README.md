@@ -359,3 +359,60 @@ existing preferences and an invisible setup controller. `make test` covers packa
 core timing; macOS stand-ins and the arm64 build run in the performance workflow. These checks
 cannot establish device FPS or prove that all preview/progress stutter is eliminated. Test automatic
 advance, rapid next/previous, first play and cached replay with Light mode off on an iPhone.
+
+## Sung-word effects
+
+**Mod Settings → Lyrics → Word effects** (default on, `spotifyglass.performance.lyricWordEffects`)
+themes matching English words while they are sung. `SGLyricWords.c` maps a token to one of thirteen
+themes: fire, ice, water, love, shine, electric, night, sky, money, bloom, blood, party, toxic.
+A short list of unrelated look-alikes ("staring", "number", "warning") is excluded explicitly. Case, surrounding punctuation, a
+possessive and common inflections are ignored; only whole words match ("star", not "start").
+Other scripts and accented words are left alone. The keyword table is the place to add words.
+
+The original 0.51.0 core already draws each word in its own view. Verified in the pinned binary:
+
+- `SGRKaraokeSweep.showTime:` (`0xc4658`) sends every word of a shown line `fillTo:`, `floatAt:`,
+  `glowAt:` and `waveAt:` on each lyrics tick; `glowAt:` receives the song clock in milliseconds
+  (`0xc4728`–`0xc472c`). The only other caller is `SGRKaraokeLineView.setActive:` (`0xc6aa0`).
+- `SGRKaraokeWordView.glowAt:` is `0xc356c`, `v24@0:8d16`; `settle` is `0xc3aa8`, `v16@0:8`, and is
+  sent when a line is activated (`0xc6468`) and from its deactivation block (`0xc6864`).
+- Ivars: `_word` (`@"SGKaraokeWord"`), `_lit` (`@"UIView"`), `_glow` (`d`). `glowAt:` caches the
+  strength it applied in `_glow` and writes `_lit.layer.shadowOpacity` only when it changes
+  (`0xc3650`–`0xc3694`); it returns early for `_whole` words.
+- `initWithWord:font:rightToLeft:swept:` (`0xc25e8`) makes `_lit` either one `UILabel`
+  (`0xc297c`–`0xc2990`) or a `UIView` of per-letter labels, sets its white shadow and uses the
+  `_fill` gradient as its mask, extended by the shadow reach. Themed text is therefore revealed
+  by the original sweep, and the glow radius is left unchanged because the mask would clip it.
+- `SGKaraokeWord`: `text` (`0x256760`, `@16@0:8`), `start` (`0x256770`) and `end` (`0x256780`),
+  both `q16@0:8`.
+
+`SGLyricEffects.m` wraps `glowAt:` and `settle` on that class only, after checking those method
+and ivar encodings; an unsupported image is left alone. The original method always runs first.
+A word is classified once and unthemed words share one state, so their cost is one associated-
+object lookup per tick. For a themed word the wrapper derives everything from the tick's time:
+painted from 200 ms before its start, particles and motion only while it is sung, restored when
+the clock is before the word again. It adds no timer, display link, polling or view traversal and
+does not change lyric timing, frame-rate requests or owner pause states. Off-main calls pass through.
+
+The glow keeps the core's shape (150 ms rise, 450 ms fall) and never goes below the core's own
+cached strength; it is rewritten only after the core writes or when the envelope moves, and
+handed back at the cached strength on restore. A paused clock repeats no drawing work. Particles
+are started once per pass and stop by themselves after twice the remaining word time (0.8–8 s),
+so a paused or stopped lyrics clock cannot leave an emitter running. `settle` also stops them.
+Words with no usable span (`end <= start`) are treated as 1.5 s long.
+
+`SGLyricEffectPaint.m` is the only UIKit part and uses public API: a pattern-image `textColor`
+on the existing labels (their per-letter wave and lift stay intact), the layer's `shadowColor`,
+a `CAEmitterLayer` and one additive `CAKeyframeAnimation`. Original colors are saved and restored.
+Reduce Motion keeps color and glow only. The effects are off in manual or automatic Light mode:
+`SGPerformanceSetLightModeObserver` reports the effective mode, and shown words are restored
+immediately. The preference is read at startup and followed through defaults changes, including
+reset and import.
+
+`tests/test_lyric_words.py` compiles the C and checks keywords, inflections, false positives,
+other scripts and the timing phases. `tests/lyric-effects-main.m` runs the real hooks against
+stand-ins with the verified ABI and a recording painter: replays after seeks, glow hand-off,
+settle, the setting, Light mode at startup and live, off-main calls, an unsupported ABI and weak
+ownership. Neither renders anything. Colors, glow, particles, motion and their cost on a phone
+are untested here and need checking on a device with word-synced lyrics; no performance or
+appearance result is claimed.

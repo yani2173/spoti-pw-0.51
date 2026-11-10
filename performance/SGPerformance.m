@@ -301,6 +301,13 @@ static void setActive(BOOL active) {
     for (id view in sg_animatedCovers.allObjects) applyCoverState(view);
 }
 
+static void (*sg_lightModeObserver)(BOOL);
+
+void SGPerformanceSetLightModeObserver(void (*observer)(BOOL lightMode)) {
+    sg_lightModeObserver = observer;
+    if (observer) observer(sg_lightMode);
+}
+
 static void refreshLightMode(void) {
     BOOL on = desiredLightMode();
     if (on == sg_lightMode) return;
@@ -308,6 +315,7 @@ static void refreshLightMode(void) {
     SGApplyLightRendering(sg_lightMode, sg_inactive, sg_transitioning || sg_tracking);
     for (SGPerfDisplayTarget *target in sg_targets.allObjects) applyState(target);
     for (id view in sg_animatedCovers.allObjects) applyCoverState(view);
+    if (sg_lightModeObserver) sg_lightModeObserver(sg_lightMode);
 }
 
 void SGSetLightMode(BOOL on) {
@@ -390,6 +398,8 @@ void SGInstallPerformance(void) {
         sg_targets = [NSHashTable weakObjectsHashTable];
         sg_animatedCovers = [NSHashTable weakObjectsHashTable];
         sg_lightMode = desiredLightMode();
+        // An observer registered before installation has only seen the default state.
+        if (sg_lightMode && sg_lightModeObserver) sg_lightModeObserver(YES);
         sg_inactive = UIApplication.sharedApplication.applicationState != UIApplicationStateActive;
         sg_factory = (CADisplayLink *(*)(id, SEL, id, SEL))method_getImplementation(factory);
         sg_pause = (void (*)(id, SEL, BOOL))method_getImplementation(paused);

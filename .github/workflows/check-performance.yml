@@ -46,6 +46,13 @@ jobs:
           xcrun clang -fobjc-arc -Wall -Wextra -Werror tests/lyrics-timing-main.m performance/SGLyricsTiming.m performance/SGLyricsIndex.c -framework Foundation -o out/lyrics-timing-tests
           out/lyrics-timing-tests
           out/lyrics-timing-tests unsupported
+      - name: Test sung-word effect timing, policy and restoration
+        run: |
+          xcrun clang -fobjc-arc -Wall -Wextra -Werror tests/lyric-effects-main.m performance/SGLyricEffects.m performance/SGLyricWords.c -framework Foundation -o out/lyric-effects-tests
+          out/lyric-effects-tests
+          out/lyric-effects-tests disabled
+          out/lyric-effects-tests light-mode
+          out/lyric-effects-tests unsupported
       - name: Test guarded 0.51.0 lyrics repairs
         run: |
           python3 - <<'PYTHON'

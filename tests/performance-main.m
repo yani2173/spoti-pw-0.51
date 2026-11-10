@@ -185,6 +185,9 @@ NSNotificationName const UIApplicationDidBecomeActiveNotification = @"UIApplicat
 static void require(BOOL condition, const char *message) {
     if (!condition) { fprintf(stderr, "FAIL: %s\n", message); exit(1); }
 }
+static NSInteger lightModeReports;
+static BOOL reportedLightMode;
+static void observeLightMode(BOOL lightMode) { lightModeReports++; reportedLightMode = lightMode; }
 static void notify(NSNotificationName name) {
     [NSNotificationCenter.defaultCenter postNotificationName:name object:nil];
 }
@@ -512,7 +515,7 @@ int main(int argc, const char *argv[]) {
         SGModSection *existing = [SGModSection new];
         existing.rows = @[];
         [root adopt:@[existing]];
-        require(root.sections.count == 3 && root.sections.firstObject == existing && root.adoptions == 1,
+        require(root.sections.count == 4 && root.sections.firstObject == existing && root.adoptions == 1,
                 "the performance section is added without replacing original sections");
         SGModSection *performance = root.sections[1];
         SGModRow *light = performance.rows.firstObject;
@@ -520,6 +523,16 @@ int main(int argc, const char *argv[]) {
                 [light.key isEqualToString:SGPerformanceLightModeKey] && !light.defaultOn && light.changed,
                 "the native settings model exposes a default-off Light mode switch");
         require(performance.rows.count == 3, "Performance exposes manual, automatic and status rows");
+        SGModSection *lyrics = root.sections[2];
+        SGModRow *effects = lyrics.rows.firstObject;
+        require([lyrics.title isEqualToString:@"Lyrics"] && lyrics.rows.count == 1 && effects.defaultOn &&
+                [effects.key isEqualToString:@"spotifyglass.performance.lyricWordEffects"] && effects.changed,
+                "word effects are a default-on switch saved under the backed-up settings prefix");
+        effects.changed(NO);
+        require([NSUserDefaults.standardUserDefaults objectForKey:@"spotifyglass.performance.lyricWordEffects"] &&
+                ![NSUserDefaults.standardUserDefaults boolForKey:@"spotifyglass.performance.lyricWordEffects"],
+                "turning word effects off is saved");
+        [NSUserDefaults.standardUserDefaults removeObjectForKey:@"spotifyglass.performance.lyricWordEffects"];
         SGModRow *automatic = performance.rows[1];
         SGModRow *status = performance.rows[2];
         require([automatic.key isEqualToString:SGPerformanceAutomaticLightModeKey] && !automatic.defaultOn && automatic.changed && status.value,
@@ -527,9 +540,9 @@ int main(int argc, const char *argv[]) {
         NSArray *adoptedSections = root.sections;
         [root adopt:root.sections];
         require(root.sections == adoptedSections, "already augmented settings retain the original array");
-        require(root.sections.count == 3 && root.adoptions == 2, "re-adopting existing rows does not duplicate the sections");
+        require(root.sections.count == 4 && root.adoptions == 2, "re-adopting existing rows does not duplicate the sections");
         [root adopt:@[existing]];
-        require(root.sections.count == 3 && root.adoptions == 3, "a rebuild regenerates the add-on sections once");
+        require(root.sections.count == 4 && root.adoptions == 3, "a rebuild regenerates the add-on sections once");
         SGModPage *unrelatedPage = [SGModPage new];
         unrelatedPage.title = @"Player";
         [unrelatedPage adopt:@[existing]];
@@ -542,9 +555,16 @@ int main(int argc, const char *argv[]) {
         nativeVisualizer.running = YES;
         require(nativeVisualizer.processing, "normal visualizer processing is initially enabled");
         [cover show:YES animated:NO];
+        SGPerformanceSetLightModeObserver(observeLightMode);
+        require(lightModeReports == 1 && !reportedLightMode, "a Light mode observer immediately receives the current state");
         SGSetLightMode(YES);
+        require(lightModeReports == 2 && reportedLightMode, "the observer follows the effective Light mode");
         require(!cover.shown && !cover.playing, "manual Light mode reveals artwork and pauses the clip together");
         SGSetLightMode(NO);
+        require(lightModeReports == 3 && !reportedLightMode, "the observer follows recovery");
+        SGSetLightMode(NO);
+        require(lightModeReports == 3, "an unchanged mode is not reported again");
+        SGPerformanceSetLightModeObserver(NULL);
         require(cover.shown && cover.playing, "manual recovery restores visibility and requested playback");
         __block CADisplayLink *scrollGpu;
         __block SGRPlayerAnimatedView *scrollCover;
