@@ -62,6 +62,9 @@ class LyricWordTests(unittest.TestCase):
         self.assertEqual(self.theme("burnin'"), FIRE)
         self.assertEqual(self.theme("lovin’"), LOVE)
         self.assertEqual(self.theme("'cause"), NONE)
+        for text in ("die\u00a0", "\u00a0die", "die\u200b", "\ufeffdie", "\u00abdie\u00bb", "die\u2009",
+                     "\u00a1die!", "die\u2060"):
+            self.assertEqual(self.theme(text), BLOOD, repr(text))
 
     def test_common_inflections(self):
         cases = {"burned": FIRE, "burning": FIRE, "flames": FIRE, "blazing": FIRE, "ashes": FIRE,

@@ -525,9 +525,12 @@ int main(int argc, const char *argv[]) {
         require(performance.rows.count == 3, "Performance exposes manual, automatic and status rows");
         SGModSection *lyrics = root.sections[2];
         SGModRow *effects = lyrics.rows.firstObject;
-        require([lyrics.title isEqualToString:@"Lyrics"] && lyrics.rows.count == 1 && effects.defaultOn &&
+        require([lyrics.title isEqualToString:@"Lyrics"] && lyrics.rows.count == 2 && effects.defaultOn &&
                 [effects.key isEqualToString:@"spotifyglass.performance.lyricWordEffects"] && effects.changed,
                 "word effects are a default-on switch saved under the backed-up settings prefix");
+        SGModRow *effectsStatus = lyrics.rows[1];
+        require(effectsStatus.value && [effectsStatus.value() isEqualToString:@"Not loaded"],
+                "the word effects status says when the drawing module is absent");
         effects.changed(NO);
         require([NSUserDefaults.standardUserDefaults objectForKey:@"spotifyglass.performance.lyricWordEffects"] &&
                 ![NSUserDefaults.standardUserDefaults boolForKey:@"spotifyglass.performance.lyricWordEffects"],

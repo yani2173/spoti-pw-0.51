@@ -404,9 +404,15 @@ Words with no usable span (`end <= start`) are treated as 1.5 s long.
 `SGLyricEffectPaint.m` is the only UIKit part and uses public API: a pattern-image `textColor`
 on the existing labels (their per-letter wave and lift stay intact), the layer's `shadowColor`,
 a `CAEmitterLayer` and one additive `CAKeyframeAnimation`. Original colors are saved and restored.
-Reduce Motion keeps color and glow only. The effects are off in manual or automatic Light mode:
+Reduce Motion keeps color and glow only.
+Each word also gets one 0.34 s overshoot as it starts, loops use cubic keyframe interpolation,
+particle size follows the lyric height, and at most three words emit particles at the same time;
+further words keep their color, glow and motion. All of it is rendered by Core Animation. The effects are off in manual or automatic Light mode:
 `SGPerformanceSetLightModeObserver` reports the effective mode, and shown words are restored
-immediately. The preference is read at startup and followed through defaults changes, including
+immediately. A **Status** row under the switch reports "Unsupported app version", "Off", "Off · Light mode",
+or counts of words seen by the hook, matched to a theme and shown, to tell a disabled policy,
+a guard failure, unmatched lyrics and a drawing problem apart on a device.
+The preference is read at startup and followed through defaults changes, including
 reset and import.
 
 `tests/test_lyric_words.py` compiles the C and checks keywords, inflections, false positives,

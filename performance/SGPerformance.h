@@ -12,3 +12,8 @@ NSString *SGPerformanceLightModeStatus(void);
 // One main-thread observer of the effective (manual or automatic) Light mode. It is called
 // immediately with the current state, then after every change, including the saved state at startup.
 void SGPerformanceSetLightModeObserver(void (*observer)(BOOL lightMode));
+
+// The sung-word effects module is built only into the iOS add-on. It reports what it is doing
+// through this provider so Mod Settings can show it; without one the status says so.
+void SGPerformanceSetWordEffectsStatus(NSString *(*provider)(void));
+NSString *SGPerformanceWordEffectsStatus(void);

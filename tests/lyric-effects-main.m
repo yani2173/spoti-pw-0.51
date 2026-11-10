@@ -84,6 +84,10 @@ void SGPerformanceSetLightModeObserver(void (*observer)(BOOL lightMode)) {
     if (observer) observer(startInLightMode);
 }
 
+static NSString *(*statusProvider)(void);
+void SGPerformanceSetWordEffectsStatus(NSString *(*provider)(void)) { statusProvider = provider; }
+static BOOL statusIs(NSString *expected) { return statusProvider && [statusProvider() isEqualToString:expected]; }
+
 static BOOL near(double a, double b) { return fabs(a - b) < 0.0001; }
 static void setWanted(id value) {
     NSUserDefaults *store = NSUserDefaults.standardUserDefaults;
@@ -104,6 +108,7 @@ int main(int argc, const char **argv) {
             SGRKaraokeWordView *view = [[SGRKaraokeWordView alloc] initWithText:@"fire" start:1000 end:2000];
             [view glowAt:1500];
             check(view.nativeGlows == 1 && !paints && !emits && !lightObserver, "an unsupported word-view ABI is left untouched");
+            check(statusIs(@"Unsupported app version"), "the status reports an unsupported ABI");
             puts("PASS: unsupported word effect ABI");
             return 0;
         }
@@ -113,6 +118,7 @@ int main(int argc, const char **argv) {
             SGRKaraokeWordView *view = [[SGRKaraokeWordView alloc] initWithText:@"fire" start:1000 end:2000];
             [view glowAt:1500];
             check(view.nativeGlows == 1 && !paints && !emits && !glows, "a saved off preference applies from startup");
+            check(statusIs(@"Off"), "the status reports the saved preference");
             setWanted(nil);
             [view glowAt:1500];
             check(paints == 1 && emits == 1, "resetting the preference restores the default-on effects live");
@@ -125,6 +131,7 @@ int main(int argc, const char **argv) {
             SGRKaraokeWordView *view = [[SGRKaraokeWordView alloc] initWithText:@"fire" start:1000 end:2000];
             [view glowAt:1500];
             check(view.nativeGlows == 1 && !paints && !emits, "Light mode at startup keeps lyrics plain");
+            check(statusIs(@"Off \u00b7 Light mode"), "the status names Light mode as the reason");
             lightObserver(NO);
             [view glowAt:1500];
             check(paints == 1 && emits == 1, "leaving Light mode enables the effects on the next tick");
@@ -142,6 +149,7 @@ int main(int argc, const char **argv) {
         [plain settle];
         check(plain.nativeGlows == 30 && plain.nativeSettles == 1 && !paints && !emits && !glows && !quenches,
               "unthemed words only reach the original methods");
+        check(statusIs(@"On \u00b7 1 words seen, 0 matched, 0 shown"), "the status counts words that reached the hook");
 
         SGRKaraokeWordView *view = [[SGRKaraokeWordView alloc] initWithText:@"Burns," start:1000 end:2000];
         [view glowAt:500];
@@ -150,6 +158,7 @@ int main(int argc, const char **argv) {
         check(paints == 1 && paintedTheme == SGLyricThemeFire && lastLit == view.litView && !emits,
               "the themed text is prepared just before the word, on its sung-text view");
         check(glows == 1 && lastGlow == 0, "the glow starts from the core's strength");
+        check(statusIs(@"On \u00b7 2 words seen, 1 matched, 1 shown"), "the status counts matched and shown words");
         [view glowAt:1500];
         check(emits == 1 && near(emittedSung, 0.5) && near(emittedLimit, 1.5), "particles start once with a bounded lifetime");
         check(near(lastGlow, 0.9), "the themed glow follows the word");

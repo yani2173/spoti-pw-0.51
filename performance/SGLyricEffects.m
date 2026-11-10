@@ -32,7 +32,17 @@ static Class sg_wordClass;
 static char sg_stateKey;
 static SGLyricEffectState *sg_plain;
 static NSHashTable *sg_active;
-static BOOL sg_enabled, sg_wanted, sg_lightMode;
+static BOOL sg_enabled, sg_wanted, sg_lightMode, sg_installed;
+// Shown in Mod Settings: tells an unsupported app, a disabled policy and "no matching words" apart.
+static NSUInteger sg_seen, sg_matched, sg_painted;
+
+static NSString *status(void) {
+    if (!sg_installed) return @"Unsupported app version";
+    if (!sg_wanted) return @"Off";
+    if (sg_lightMode) return @"Off \u00b7 Light mode";
+    return [NSString stringWithFormat:@"On \u00b7 %lu words seen, %lu matched, %lu shown",
+            (unsigned long)sg_seen, (unsigned long)sg_matched, (unsigned long)sg_painted];
+}
 
 static double coreGlow(id view) {
     double glow;
@@ -45,12 +55,14 @@ static SGLyricEffectState *stateOf(id view) {
     if (state) return state;
     // Classified once per word view. Every unthemed word shares one immutable state.
     state = sg_plain;
+    sg_seen++;
     id<SGLyricEffectWord> word = object_getIvar(view, sg_wordIvar);
     NSString *text = [word isKindOfClass:sg_wordClass] ? word.text : nil;
     if ([text isKindOfClass:NSString.class]) {
         const char *utf8 = text.UTF8String;
         SGLyricTheme theme = utf8 ? SGLyricThemeForWord(utf8, strlen(utf8)) : SGLyricThemeNone;
         if (theme != SGLyricThemeNone) {
+            sg_matched++;
             state = [SGLyricEffectState new];
             state.theme = theme;
             state.glow = -1;
@@ -94,6 +106,7 @@ static void update(id view, SGLyricEffectState *state, double time, BOOL coreWro
     }
     if (!state.painted) {
         state.painted = YES;
+        sg_painted++;
         [sg_active addObject:view];
         sg_painter.paint(view, lit, state.theme);
     }
@@ -165,6 +178,7 @@ void SGInstallLyricEffects(const SGLyricEffectPainter *painter) {
         !painter->quench || !painter->glow) return;
     static dispatch_once_t once;
     dispatch_once(&once, ^{
+        SGPerformanceSetWordEffectsStatus(status);
         Class view = NSClassFromString(@"SGRKaraokeWordView");
         Class word = NSClassFromString(@"SGKaraokeWord");
         SEL glow = sel_registerName("glowAt:"), settled = sel_registerName("settle");
@@ -182,6 +196,7 @@ void SGInstallLyricEffects(const SGLyricEffectPainter *painter) {
         sg_plain = [SGLyricEffectState new];
         sg_active = [NSHashTable weakObjectsHashTable];
         sg_wanted = wanted();
+        sg_installed = YES;
         sg_glowAt = (void (*)(id, SEL, double))method_getImplementation(class_getInstanceMethod(view, glow));
         sg_settle = (void (*)(id, SEL))method_getImplementation(class_getInstanceMethod(view, settled));
         // Light mode and the saved preference are both known before a word can be painted.

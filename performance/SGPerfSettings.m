@@ -98,7 +98,10 @@ static void adoptSections(id<SGPerfSettingsPage> page, SEL cmd, NSArray *section
         };
         id<SGPerfSettingsSection> lyrics = [sg_sectionClass new];
         lyrics.title = @"Lyrics";
-        lyrics.rows = @[effects];
+        id<SGPerfSettingsRow> effectsStatus = [sg_rowClass new];
+        effectsStatus.title = @"Status";
+        effectsStatus.value = ^NSString *{ return SGPerformanceWordEffectsStatus(); };
+        lyrics.rows = @[effects, effectsStatus];
         lyrics.footer = @"Needs word-synced lyrics for per-word timing. Light mode turns the effects off, and Reduce Motion keeps only the colors.";
         [augmented addObject:lyrics];
     }

@@ -325,12 +325,18 @@ SGLyricTheme SGLyricThemeForWord(const char *utf8, size_t length) {
     for (size_t i = 0; i <= length; i++) {
         unsigned char byte = i < length ? (unsigned char)utf8[i] : ' ';
         bool apostrophe = byte == '\'';
-        if (byte == 0xE2 && i + 2 < length && (unsigned char)utf8[i + 1] == 0x80) {
-            // General punctuation such as curly quotes, dashes and the ellipsis.
-            unsigned char last = (unsigned char)utf8[i + 2];
-            if (last < 0x80 || last > 0xBF) return SGLyricThemeNone;
-            apostrophe = last == 0x98 || last == 0x99;
+        unsigned char next = i + 1 < length ? (unsigned char)utf8[i + 1] : 0;
+        unsigned char last = i + 2 < length ? (unsigned char)utf8[i + 2] : 0;
+        if (byte == 0xE2 && (next == 0x80 || next == 0x81) && last >= 0x80 && last <= 0xBF) {
+            // General punctuation: curly quotes, dashes, the ellipsis, thin and zero-width spaces.
+            apostrophe = next == 0x80 && (last == 0x98 || last == 0x99);
             byte = apostrophe ? '\'' : ' ';
+            i += 2;
+        } else if (byte == 0xC2 && next >= 0x80 && next <= 0xBF) {
+            byte = ' '; // U+0080...U+00BF: a no-break space or Latin-1 punctuation, never a letter.
+            i += 1;
+        } else if (byte == 0xEF && next == 0xBB && last == 0xBF) {
+            byte = ' '; // A byte-order mark / zero-width no-break space.
             i += 2;
         } else if (byte >= 0x80) {
             return SGLyricThemeNone; // Another script or an accented letter: not an English keyword.

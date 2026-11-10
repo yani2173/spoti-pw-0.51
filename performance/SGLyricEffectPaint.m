@@ -93,6 +93,17 @@ static const SGThemeLook sg_looks[SGLyricThemeCount] = {
 
 static char sg_recordKey;
 static NSString *const sg_motionKey = @"spotifyglass.lyricWordMotion";
+static NSString *const sg_entranceKey = @"spotifyglass.lyricWordEntrance";
+// At most this many words emit particles at once; further words keep color, glow and motion.
+static const NSUInteger sg_emitterLimit = 3;
+static NSHashTable<CAEmitterLayer *> *sg_emitters;
+
+static NSUInteger liveEmitters(void) {
+    NSUInteger live = 0;
+    for (CAEmitterLayer *emitter in sg_emitters.allObjects)
+        if (emitter.birthRate > 0 && emitter.superlayer) live++;
+    return live;
+}
 
 static SGLyricPaintRecord *recordOf(id word, BOOL create) {
     SGLyricPaintRecord *record = objc_getAssociatedObject(word, &sg_recordKey);
@@ -240,12 +251,13 @@ static CAAnimation *motion(SGLyricTheme theme, double sung, double limit) {
     NSArray<NSNumber *> *values = nil;
     CFTimeInterval duration = 0;
     float fixedRepeats = 0;
+    BOOL smooth = YES;
     switch (theme) {
         case SGLyricThemeFire:
             path = @"transform.scale.y"; values = @[@0, @0.035, @0.01, @0.045, @0]; duration = 0.55; break;
         case SGLyricThemeIce:
             path = @"transform.translation.x"; values = @[@0, @-1.1, @1.1, @-0.8, @0.8, @0];
-            duration = 0.32; fixedRepeats = 2; break;
+            duration = 0.32; fixedRepeats = 2; smooth = NO; break;
         case SGLyricThemeWater:
             path = @"transform.translation.y"; values = @[@0, @1.6, @0, @-1.6, @0]; duration = 1.3; break;
         case SGLyricThemeLove:
@@ -254,7 +266,7 @@ static CAAnimation *motion(SGLyricTheme theme, double sung, double limit) {
             path = @"transform.scale"; values = @[@0, @0.07, @0]; duration = 0.5; fixedRepeats = 1; break;
         case SGLyricThemeElectric:
             path = @"transform.translation.x"; values = @[@0, @2, @-2, @1.6, @-1.6, @0.6, @0];
-            duration = 0.2; fixedRepeats = 3; break;
+            duration = 0.2; fixedRepeats = 3; smooth = NO; break;
         case SGLyricThemeSky:
             path = @"transform.translation.y"; values = @[@0, @-2.2, @0]; duration = 1.4; break;
         case SGLyricThemeMoney:
@@ -274,8 +286,22 @@ static CAAnimation *motion(SGLyricTheme theme, double sung, double limit) {
     animation.values = values;
     animation.duration = duration;
     animation.additive = YES;
+    // A curve through the keyframes instead of straight segments; shivers and shocks stay sharp.
+    if (smooth) animation.calculationMode = kCAAnimationCubic;
     double cycles = fixedRepeats > 0 ? fixedRepeats : floor(fmin(sung, limit) / duration);
     animation.repeatCount = (float)fmax(1, cycles);
+    return animation;
+}
+
+// One short overshoot as the word begins, on every theme whose own motion is not already a pop.
+static CAAnimation *entrance(SGLyricTheme theme) {
+    if (theme == SGLyricThemeShine || theme == SGLyricThemeMoney) return nil;
+    CAKeyframeAnimation *animation = [CAKeyframeAnimation animationWithKeyPath:@"transform.scale"];
+    animation.values = @[@0, @0.075, @-0.012, @0];
+    animation.keyTimes = @[@0, @0.38, @0.74, @1];
+    animation.duration = 0.34;
+    animation.additive = YES;
+    animation.calculationMode = kCAAnimationCubic;
     return animation;
 }
 
@@ -294,13 +320,22 @@ static void emit(id word, SGLyricTheme theme, double sung, double limit) {
     SGLyricPaintRecord *record = recordOf(word, YES);
     retire(record.emitter);
     const SGThemeLook *look = &sg_looks[theme];
+
+    CAAnimation *pop = entrance(theme);
+    if (pop) [view.layer addAnimation:pop forKey:sg_entranceKey];
+    CAAnimation *animation = motion(theme, sung, limit);
+    if (animation) [view.layer addAnimation:animation forKey:sg_motionKey];
+
     UIImage *image = particleImage(look->shape);
-    if (!image) return;
+    if (!sg_emitters) sg_emitters = [NSHashTable weakObjectsHashTable];
+    if (!image || liveEmitters() >= sg_emitterLimit) return;
+    // Particles follow the lyric size, so small backing lines are not buried and large text is not sparse.
+    CGFloat size = (CGFloat)fmin(1.4, fmax(0.7, height / 44));
 
     CAEmitterCell *cell = [CAEmitterCell emitterCell];
     cell.contents = (__bridge id)image.CGImage;
     cell.contentsScale = image.scale;
-    cell.birthRate = look->birthRate * (float)fmin(2.5, fmax(0.6, width / 70));
+    cell.birthRate = look->birthRate * (float)fmin(2.0, fmax(0.6, width / 70));
     cell.lifetime = look->lifetime;
     cell.lifetimeRange = look->lifetimeRange;
     // Direction comes from gravity rather than an emission angle, whose meaning depends on the shape.
@@ -308,9 +343,10 @@ static void emit(id word, SGLyricTheme theme, double sung, double limit) {
     cell.velocityRange = look->velocityRange;
     cell.emissionRange = (CGFloat)(2 * M_PI);
     cell.yAcceleration = look->gravity;
-    cell.scale = look->scale;
-    cell.scaleRange = look->scaleRange;
-    cell.scaleSpeed = look->scaleSpeed;
+    cell.scale = look->scale * size;
+    cell.scaleRange = look->scaleRange * size;
+    cell.scaleSpeed = look->scaleSpeed * size;
+    cell.alphaRange = 0.25f;
     cell.spinRange = look->spinRange;
     cell.alphaSpeed = look->alphaSpeed;
     cell.greenRange = look->greenRange;
@@ -332,9 +368,7 @@ static void emit(id word, SGLyricTheme theme, double sung, double limit) {
     [view.layer addSublayer:emitter];
     [CATransaction commit];
     record.emitter = emitter;
-
-    CAAnimation *animation = motion(theme, sung, limit);
-    if (animation) [view.layer addAnimation:animation forKey:sg_motionKey];
+    [sg_emitters addObject:emitter];
 
     // The lyrics clock may pause without another tick; never keep emitting indefinitely.
     __weak CAEmitterLayer *weakEmitter = emitter;

@@ -302,6 +302,12 @@ static void setActive(BOOL active) {
 }
 
 static void (*sg_lightModeObserver)(BOOL);
+static NSString *(*sg_wordEffectsStatus)(void);
+
+void SGPerformanceSetWordEffectsStatus(NSString *(*provider)(void)) { sg_wordEffectsStatus = provider; }
+NSString *SGPerformanceWordEffectsStatus(void) {
+    return sg_wordEffectsStatus ? sg_wordEffectsStatus() : @"Not loaded";
+}
 
 void SGPerformanceSetLightModeObserver(void (*observer)(BOOL lightMode)) {
     sg_lightModeObserver = observer;
