@@ -87,7 +87,7 @@ static void adoptSections(id<SGPerfSettingsPage> page, SEL cmd, NSArray *section
         // callback; only a missing or different value is written here.
         id<SGPerfSettingsRow> effects = [sg_rowClass new];
         effects.title = @"Word effects";
-        effects.subtitle = @"A soft tint, glow and lift on words like fire, rain, love or night as they are sung";
+        effects.subtitle = @"A soft tint, glow, lift and small hearts, snow or sparkles on matching words as they are sung";
         effects.key = SGLyricWordEffectsKey;
         effects.defaultOn = YES;
         effects.symbol = @"flame";

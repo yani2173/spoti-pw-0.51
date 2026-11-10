@@ -11,7 +11,10 @@
 // The look is deliberately quiet. A word keeps the lyric's white at its top and takes a soft
 // tint toward its base, lifts once on a critically damped spring while it is sung, settles the
 // same way, and gives off a few small motes of light. There are no shakes, bounces, loops or
-// pictorial particles: the theme is carried by hue and by which way the motes drift.
+// hand-drawn particles. A theme is carried by hue, by which way its particles drift, and by one
+// small glyph from Apple's own SF Symbols set (a heart, a snowflake, a drop, a sparkle), flat and
+// used sparingly, so the particles share the system's drawing instead of imitating it.
+
 typedef struct {
     CGFloat top[3], middle[3], bottom[3]; // text gradient, top to bottom
     CGFloat glow[3];
@@ -20,35 +23,50 @@ typedef struct {
     float rate;                           // motes per second for a word about 70 points wide
     float lifetime;
     CGFloat response;                     // spring response in seconds
+    const char *symbol;                   // SF Symbol name; NULL for a plain mote of light
+    CGFloat spin;                         // how far a particle may turn, in radians per second
 } SGThemeLook;
 
 static const SGThemeLook sg_looks[SGLyricThemeCount] = {
     [SGLyricThemeFire] = {{1.00, 0.96, 0.86}, {1.00, 0.74, 0.42}, {1.00, 0.48, 0.24},
-                          {1.00, 0.52, 0.22}, {1.00, 0.78, 0.50}, -34, 9, 1.2f, 0.36},
+                          {1.00, 0.52, 0.22}, {1.00, 0.78, 0.50}, -34, 9, 1.2f, 0.36,
+                          "flame.fill", 0.2},
     [SGLyricThemeIce] = {{1.00, 1.00, 1.00}, {0.86, 0.95, 1.00}, {0.62, 0.84, 1.00},
-                         {0.62, 0.86, 1.00}, {0.92, 0.97, 1.00}, 14, 6, 1.7f, 0.46},
+                         {0.62, 0.86, 1.00}, {0.92, 0.97, 1.00}, 14, 6, 1.7f, 0.46,
+                          "snowflake", 0.6},
     [SGLyricThemeWater] = {{0.90, 0.97, 1.00}, {0.60, 0.84, 1.00}, {0.32, 0.64, 1.00},
-                           {0.30, 0.62, 1.00}, {0.72, 0.88, 1.00}, 30, 6, 1.3f, 0.46},
+                           {0.30, 0.62, 1.00}, {0.72, 0.88, 1.00}, 30, 6, 1.3f, 0.46,
+                          "drop.fill", 0},
     [SGLyricThemeLove] = {{1.00, 0.93, 0.95}, {1.00, 0.66, 0.76}, {1.00, 0.38, 0.54},
-                          {1.00, 0.38, 0.56}, {1.00, 0.74, 0.82}, -18, 5, 1.6f, 0.42},
+                          {1.00, 0.38, 0.56}, {1.00, 0.74, 0.82}, -18, 5, 1.6f, 0.42,
+                          "heart.fill", 0.2},
     [SGLyricThemeShine] = {{1.00, 1.00, 0.97}, {1.00, 0.93, 0.68}, {1.00, 0.80, 0.38},
-                           {1.00, 0.84, 0.45}, {1.00, 0.95, 0.78}, 0, 7, 1.3f, 0.40},
+                           {1.00, 0.84, 0.45}, {1.00, 0.95, 0.78}, 0, 7, 1.3f, 0.40,
+                          "sparkle", 0.5},
     [SGLyricThemeElectric] = {{1.00, 1.00, 1.00}, {0.80, 0.92, 1.00}, {0.50, 0.66, 1.00},
-                              {0.52, 0.72, 1.00}, {0.86, 0.94, 1.00}, 0, 7, 0.9f, 0.26},
+                              {0.52, 0.72, 1.00}, {0.86, 0.94, 1.00}, 0, 7, 0.9f, 0.26,
+                          "bolt.fill", 0.2},
     [SGLyricThemeNight] = {{0.95, 0.92, 1.00}, {0.76, 0.68, 1.00}, {0.55, 0.46, 0.98},
-                           {0.60, 0.46, 1.00}, {0.82, 0.76, 1.00}, -4, 5, 1.9f, 0.56},
+                           {0.60, 0.46, 1.00}, {0.82, 0.76, 1.00}, -4, 5, 1.9f, 0.56,
+                          "moon.fill", 0.15},
     [SGLyricThemeSky] = {{1.00, 1.00, 1.00}, {0.84, 0.94, 1.00}, {0.60, 0.82, 1.00},
-                         {0.62, 0.84, 1.00}, {0.95, 0.98, 1.00}, -20, 5, 1.8f, 0.50},
+                         {0.62, 0.84, 1.00}, {0.95, 0.98, 1.00}, -20, 5, 1.8f, 0.50,
+                          "cloud.fill", 0},
     [SGLyricThemeMoney] = {{1.00, 0.99, 0.86}, {0.80, 0.94, 0.62}, {0.42, 0.82, 0.50},
-                           {0.45, 0.85, 0.50}, {0.88, 0.96, 0.70}, -10, 6, 1.4f, 0.38},
+                           {0.45, 0.85, 0.50}, {0.88, 0.96, 0.70}, -10, 6, 1.4f, 0.38,
+                          "dollarsign", 0.2},
     [SGLyricThemeBloom] = {{1.00, 0.96, 1.00}, {0.96, 0.78, 0.98}, {0.84, 0.56, 0.92},
-                           {0.86, 0.56, 0.94}, {0.98, 0.84, 1.00}, 12, 5, 1.8f, 0.50},
+                           {0.86, 0.56, 0.94}, {0.98, 0.84, 1.00}, 12, 5, 1.8f, 0.50,
+                          "leaf.fill", 1.0},
     [SGLyricThemeBlood] = {{1.00, 0.90, 0.88}, {1.00, 0.52, 0.48}, {0.90, 0.20, 0.22},
-                           {0.92, 0.20, 0.22}, {1.00, 0.60, 0.56}, 20, 4, 1.5f, 0.44},
+                           {0.92, 0.20, 0.22}, {1.00, 0.60, 0.56}, 20, 4, 1.5f, 0.44,
+                          "drop.fill", 0},
     [SGLyricThemeParty] = {{1.00, 0.94, 0.90}, {1.00, 0.66, 0.72}, {0.92, 0.42, 0.86},
-                           {0.96, 0.46, 0.80}, {1.00, 0.80, 0.88}, -12, 8, 1.2f, 0.32},
+                           {0.96, 0.46, 0.80}, {1.00, 0.80, 0.88}, -12, 8, 1.2f, 0.32,
+                          "music.note", 0.25},
     [SGLyricThemeToxic] = {{0.98, 1.00, 0.86}, {0.84, 0.98, 0.50}, {0.60, 0.90, 0.30},
-                           {0.60, 0.92, 0.30}, {0.90, 1.00, 0.66}, -16, 5, 1.6f, 0.44},
+                           {0.60, 0.92, 0.30}, {0.90, 1.00, 0.66}, -16, 5, 1.6f, 0.44,
+                          "circle", 0},
 };
 
 // How far a sung word rises: 4% larger and about a point up, the same on every theme.
@@ -129,21 +147,49 @@ static UIColor *themeFill(SGLyricTheme theme, CGFloat height) {
     return fill;
 }
 
-// One soft round mote: a bright core falling off to nothing, with no visible edge.
-static UIImage *moteImage(void) {
-    static UIImage *image;
-    if (image) return image;
-    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(24, 24)];
-    image = [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
-        CGFloat components[12] = {1, 1, 1, 1, 1, 1, 1, 0.35, 1, 1, 1, 0};
-        CGFloat locations[3] = {0, 0.35, 1};
-        CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
-        CGGradientRef gradient = CGGradientCreateWithColorComponents(space, components, locations, 3);
-        CGContextDrawRadialGradient(context.CGContext, gradient, CGPointMake(12, 12), 0,
-                                    CGPointMake(12, 12), 12, 0);
-        CGGradientRelease(gradient);
-        CGColorSpaceRelease(space);
+// Particle images, drawn once, cached and tinted by the emitter. A theme's glyph is the system's
+// SF Symbol, rendered flat in white with a faint halo; nothing here draws a shape by hand. If a
+// symbol is missing on this iOS version the theme falls back to the plain mote of light.
+static const CGFloat sg_canvas = 40;
+
+static UIImage *particleImage(const char *symbol) {
+    static NSMutableDictionary<NSString *, UIImage *> *images;
+    if (!images) images = [NSMutableDictionary dictionary];
+    NSString *name = symbol ? @(symbol) : @"";
+    UIImage *cached = images[name];
+    if (cached) return cached;
+    UIImage *glyph = nil;
+    if (name.length) {
+        UIImageSymbolConfiguration *style =
+            [UIImageSymbolConfiguration configurationWithPointSize:26 weight:UIImageSymbolWeightSemibold];
+        glyph = [[UIImage systemImageNamed:name withConfiguration:style]
+                 imageWithTintColor:UIColor.whiteColor renderingMode:UIImageRenderingModeAlwaysOriginal];
+    }
+    UIGraphicsImageRenderer *renderer =
+        [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(sg_canvas, sg_canvas)];
+    UIImage *image = [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
+        CGContextRef canvas = context.CGContext;
+        CGSize size = glyph.size;
+        if (!glyph || !(size.width >= 1) || !(size.height >= 1)) {
+            // A bright core falling off to nothing, with no visible edge.
+            CGFloat components[12] = {1, 1, 1, 1, 1, 1, 1, 0.35, 1, 1, 1, 0};
+            CGFloat locations[3] = {0, 0.35, 1};
+            CGPoint center = CGPointMake(sg_canvas / 2, sg_canvas / 2);
+            CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+            CGGradientRef gradient = CGGradientCreateWithColorComponents(space, components, locations, 3);
+            CGContextDrawRadialGradient(canvas, gradient, center, 0, center, sg_canvas / 2, 0);
+            CGGradientRelease(gradient);
+            CGColorSpaceRelease(space);
+            return;
+        }
+        // The symbol keeps its own proportions inside a 30-point box, leaving room for the halo.
+        CGFloat fit = (CGFloat)fmin(30 / size.width, 30 / size.height);
+        CGSize drawn = CGSizeMake(size.width * fit, size.height * fit);
+        CGContextSetShadowWithColor(canvas, CGSizeZero, 3, [UIColor colorWithWhite:1 alpha:0.55].CGColor);
+        [glyph drawInRect:CGRectMake((sg_canvas - drawn.width) / 2, (sg_canvas - drawn.height) / 2,
+                                     drawn.width, drawn.height)];
     }];
+    if (image) images[name] = image;
     return image;
 }
 
@@ -296,15 +342,19 @@ static void emit(id word, SGLyricTheme theme, double sung, double limit) {
     });
 
     retire(record.emitter);
-    UIImage *image = moteImage();
+    BOOL mote = look->symbol == NULL;
+    UIImage *image = particleImage(look->symbol);
     if (!sg_emitters) sg_emitters = [NSHashTable weakObjectsHashTable];
     if (!image || liveEmitters() >= sg_emitterLimit) return;
 
-    // A mote appears small and faint, grows a little and fades: no hard birth, no hard death.
+    // A particle appears small and faint, grows a little and fades: no hard birth, no hard death.
+    // Shapes are fewer and a little larger than motes so they read without crowding the word.
     CAEmitterCell *cell = [CAEmitterCell emitterCell];
     cell.contents = (__bridge id)image.CGImage;
     cell.contentsScale = image.scale;
-    cell.birthRate = look->rate * (float)fmin(2.0, fmax(0.6, width / 70));
+    cell.birthRate = look->rate * (mote ? 1.0f : 0.6f) * (float)fmin(2.0, fmax(0.6, width / 70));
+    // The bitmap holds more detail than a particle shows; mipmaps keep it clean when scaled down.
+    cell.minificationFilter = kCAFilterTrilinear;
     cell.lifetime = look->lifetime;
     cell.lifetimeRange = look->lifetime * 0.3f;
     // Direction comes from the drift rather than an emission angle, whose meaning depends on the shape.
@@ -312,10 +362,14 @@ static void emit(id word, SGLyricTheme theme, double sung, double limit) {
     cell.velocityRange = 4;
     cell.emissionRange = (CGFloat)(2 * M_PI);
     cell.yAcceleration = look->drift;
-    cell.scale = 0.07 * size;
-    cell.scaleRange = 0.03 * size;
-    cell.scaleSpeed = 0.06 * size;
-    cell.color = solid(look->mote, 0.7).CGColor;
+    // On-screen points for normal lyric text: where a particle starts, how much that varies,
+    // and how much it grows per second.
+    cell.scale = (mote ? 1.7 : 8.0) / sg_canvas * size;
+    cell.scaleRange = (mote ? 0.8 : 1.6) / sg_canvas * size;
+    cell.scaleSpeed = (mote ? 1.4 : 2.2) / sg_canvas * size;
+    // Leaves and snow turn slowly as they fall; a heart or a note only tilts.
+    cell.spinRange = look->spin;
+    cell.color = solid(look->mote, mote ? 0.7 : 0.85).CGColor;
     cell.alphaRange = 0.2f;
     cell.alphaSpeed = -0.7f / look->lifetime;
 

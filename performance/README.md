@@ -410,9 +410,13 @@ The look is intentionally restrained, following the motion guidance in `.agents/
 momentum). The lyric's white holds through the top of the glyphs and tints toward the theme hue
 at the base. A sung word rises once, 4% larger and about a point up, on a damping-ratio-1 spring
 and settles with the opposite additive springs, so an early end blends from the current position
-instead of jumping; nothing shakes, bounces or loops. Particles are one soft round mote for every
-theme, a few per second, growing slightly while they fade; a theme differs only in hue, drift
-direction and spring response. Sizes follow the lyric height, at most three words give off motes
+instead of jumping; nothing shakes, bounces or loops. Particles are sparse (a few per second),
+small, soft-edged and grow slightly while they fade. A theme has one glyph, and it is the system's own SF Symbol
+rather than a hand-drawn shape: `heart.fill`, `snowflake`, `drop.fill` (water and blood),
+`flame.fill`, `sparkle`, `bolt.fill`, `moon.fill`, `cloud.fill`, `dollarsign`, `leaf.fill`,
+`music.note` and `circle` (toxic). Each is rendered once, flat white with a faint halo, into a
+cached 40-point bitmap that the emitter tints and shows at about 8 points with trilinear
+filtering; a missing symbol falls back to a plain mote. The particle count is unchanged. Sizes follow the lyric height, at most three words give off motes
 at once, and the glow floor is 0.7 of the envelope. All of it is rendered by Core Animation. The effects are off in manual or automatic Light mode:
 `SGPerformanceSetLightModeObserver` reports the effective mode, and shown words are restored
 immediately. A **Status** row under the switch reports "Unsupported app version", "Off", "Off · Light mode",
