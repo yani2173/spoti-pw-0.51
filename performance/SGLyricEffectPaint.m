@@ -6,79 +6,56 @@
 
 // UIKit/Core Animation drawing for sung-word effects. Only public API is used here; the timing
 // policy and the verified 0.51.0 hooks are in SGLyricEffects.m. Nothing in this file runs per
-// frame: text is recolored once, and particles/motion are rendered by Core Animation.
-typedef NS_ENUM(NSInteger, SGParticleShape) {
-    SGParticleDot, SGParticleSpark, SGParticleHeart, SGParticleDrop, SGParticleShapeCount
-};
-
+// frame: text is recolored once, and motes/motion are rendered by Core Animation.
+//
+// The look is deliberately quiet. A word keeps the lyric's white at its top and takes a soft
+// tint toward its base, lifts once on a critically damped spring while it is sung, settles the
+// same way, and gives off a few small motes of light. There are no shakes, bounces, loops or
+// pictorial particles: the theme is carried by hue and by which way the motes drift.
 typedef struct {
     CGFloat top[3], middle[3], bottom[3]; // text gradient, top to bottom
     CGFloat glow[3];
-    CGFloat tint[3];                      // particle color
-    float greenRange;
-    SGParticleShape shape;
-    BOOL area;                            // spawn over the whole word instead of a thin band
-    BOOL additive;
-    CGFloat origin;                       // band position, 0 (top) ... 1 (bottom)
-    float birthRate, lifetime, lifetimeRange, alphaSpeed;
-    CGFloat velocity, velocityRange, gravity; // gravity < 0 rises
-    CGFloat scale, scaleRange, scaleSpeed, spinRange;
+    CGFloat mote[3];
+    CGFloat drift;                        // mote acceleration in points/s^2; negative rises
+    float rate;                           // motes per second for a word about 70 points wide
+    float lifetime;
+    CGFloat response;                     // spring response in seconds
 } SGThemeLook;
 
 static const SGThemeLook sg_looks[SGLyricThemeCount] = {
-    [SGLyricThemeFire] = {
-        {1.00, 0.16, 0.05}, {1.00, 0.52, 0.06}, {1.00, 0.89, 0.30}, {1.00, 0.45, 0.10},
-        {1.00, 0.60, 0.15}, 0.25f, SGParticleDot, NO, YES, 0.62,
-        20, 0.85f, 0.30f, -1.1f, 9, 7, -75, 0.20, 0.09, -0.12, 0},
-    [SGLyricThemeIce] = {
-        {1.00, 1.00, 1.00}, {0.72, 0.93, 1.00}, {0.36, 0.72, 1.00}, {0.55, 0.85, 1.00},
-        {0.92, 0.97, 1.00}, 0, SGParticleDot, NO, NO, 0.20,
-        11, 1.30f, 0.40f, -0.7f, 6, 4, 22, 0.16, 0.07, 0, 0},
-    [SGLyricThemeWater] = {
-        {0.55, 0.90, 1.00}, {0.20, 0.62, 1.00}, {0.08, 0.36, 0.95}, {0.20, 0.60, 1.00},
-        {0.50, 0.78, 1.00}, 0, SGParticleDrop, NO, NO, 0.30,
-        13, 0.60f, 0.15f, -1.5f, 2, 2, 380, 0.42, 0.12, 0, 0},
-    [SGLyricThemeLove] = {
-        {1.00, 0.62, 0.78}, {1.00, 0.30, 0.52}, {0.96, 0.12, 0.30}, {1.00, 0.25, 0.50},
-        {1.00, 0.35, 0.58}, 0.12f, SGParticleHeart, NO, NO, 0.40,
-        6, 1.30f, 0.30f, -0.75f, 8, 6, -38, 0.36, 0.12, 0.08, 0.5},
-    [SGLyricThemeShine] = {
-        {1.00, 1.00, 0.95}, {1.00, 0.90, 0.50}, {1.00, 0.72, 0.18}, {1.00, 0.85, 0.40},
-        {1.00, 0.93, 0.62}, 0, SGParticleSpark, YES, YES, 0.50,
-        11, 0.65f, 0.20f, -1.4f, 4, 4, 0, 0.42, 0.16, -0.55, 2.0},
-    [SGLyricThemeElectric] = {
-        {1.00, 1.00, 0.75}, {0.75, 0.95, 1.00}, {0.45, 0.55, 1.00}, {0.60, 0.80, 1.00},
-        {0.78, 0.93, 1.00}, 0, SGParticleSpark, YES, YES, 0.50,
-        24, 0.26f, 0.10f, -3.2f, 95, 45, 0, 0.26, 0.10, -0.60, 6.0},
-    [SGLyricThemeNight] = {
-        {0.86, 0.74, 1.00}, {0.62, 0.45, 1.00}, {0.40, 0.30, 0.90}, {0.60, 0.40, 1.00},
-        {0.72, 0.58, 1.00}, 0, SGParticleDot, YES, YES, 0.50,
-        8, 1.70f, 0.50f, -0.55f, 7, 5, -6, 0.26, 0.10, 0, 0},
-    [SGLyricThemeSky] = {
-        {1.00, 1.00, 1.00}, {0.74, 0.90, 1.00}, {0.45, 0.74, 1.00}, {0.62, 0.84, 1.00},
-        {0.95, 0.98, 1.00}, 0, SGParticleDot, NO, NO, 0.45,
-        9, 1.50f, 0.40f, -0.6f, 6, 4, -24, 0.24, 0.10, 0.05, 0},
-    [SGLyricThemeMoney] = {
-        {1.00, 0.95, 0.55}, {0.62, 0.92, 0.42}, {0.20, 0.78, 0.36}, {0.35, 0.90, 0.40},
-        {1.00, 0.88, 0.40}, 0.10f, SGParticleSpark, YES, YES, 0.50,
-        12, 0.75f, 0.25f, -1.2f, 10, 8, -30, 0.36, 0.14, -0.40, 3.0},
-    [SGLyricThemeBloom] = {
-        {1.00, 0.80, 0.90}, {1.00, 0.52, 0.72}, {0.52, 0.86, 0.46}, {1.00, 0.55, 0.75},
-        {1.00, 0.66, 0.80}, 0.12f, SGParticleDrop, NO, NO, 0.25,
-        8, 1.50f, 0.40f, -0.6f, 10, 6, 26, 0.34, 0.12, 0, 2.5},
-    [SGLyricThemeBlood] = {
-        {1.00, 0.42, 0.36}, {0.94, 0.14, 0.14}, {0.70, 0.02, 0.08}, {0.95, 0.10, 0.12},
-        {0.90, 0.08, 0.10}, 0, SGParticleDrop, NO, NO, 0.70,
-        7, 0.90f, 0.25f, -0.9f, 1, 1, 150, 0.36, 0.12, 0, 0},
-    [SGLyricThemeParty] = {
-        {1.00, 0.40, 0.85}, {0.72, 0.50, 1.00}, {0.30, 0.90, 1.00}, {0.85, 0.45, 1.00},
-        {1.00, 0.55, 0.90}, 0.45f, SGParticleSpark, YES, YES, 0.50,
-        18, 0.70f, 0.25f, -1.3f, 45, 25, 60, 0.30, 0.12, -0.30, 5.0},
-    [SGLyricThemeToxic] = {
-        {0.95, 1.00, 0.45}, {0.62, 0.98, 0.25}, {0.25, 0.82, 0.30}, {0.55, 1.00, 0.25},
-        {0.70, 1.00, 0.35}, 0.10f, SGParticleDot, NO, YES, 0.60,
-        10, 1.30f, 0.40f, -0.7f, 5, 4, -30, 0.26, 0.12, 0.10, 0},
+    [SGLyricThemeFire] = {{1.00, 0.96, 0.86}, {1.00, 0.74, 0.42}, {1.00, 0.48, 0.24},
+                          {1.00, 0.52, 0.22}, {1.00, 0.78, 0.50}, -34, 9, 1.2f, 0.36},
+    [SGLyricThemeIce] = {{1.00, 1.00, 1.00}, {0.86, 0.95, 1.00}, {0.62, 0.84, 1.00},
+                         {0.62, 0.86, 1.00}, {0.92, 0.97, 1.00}, 14, 6, 1.7f, 0.46},
+    [SGLyricThemeWater] = {{0.90, 0.97, 1.00}, {0.60, 0.84, 1.00}, {0.32, 0.64, 1.00},
+                           {0.30, 0.62, 1.00}, {0.72, 0.88, 1.00}, 30, 6, 1.3f, 0.46},
+    [SGLyricThemeLove] = {{1.00, 0.93, 0.95}, {1.00, 0.66, 0.76}, {1.00, 0.38, 0.54},
+                          {1.00, 0.38, 0.56}, {1.00, 0.74, 0.82}, -18, 5, 1.6f, 0.42},
+    [SGLyricThemeShine] = {{1.00, 1.00, 0.97}, {1.00, 0.93, 0.68}, {1.00, 0.80, 0.38},
+                           {1.00, 0.84, 0.45}, {1.00, 0.95, 0.78}, 0, 7, 1.3f, 0.40},
+    [SGLyricThemeElectric] = {{1.00, 1.00, 1.00}, {0.80, 0.92, 1.00}, {0.50, 0.66, 1.00},
+                              {0.52, 0.72, 1.00}, {0.86, 0.94, 1.00}, 0, 7, 0.9f, 0.26},
+    [SGLyricThemeNight] = {{0.95, 0.92, 1.00}, {0.76, 0.68, 1.00}, {0.55, 0.46, 0.98},
+                           {0.60, 0.46, 1.00}, {0.82, 0.76, 1.00}, -4, 5, 1.9f, 0.56},
+    [SGLyricThemeSky] = {{1.00, 1.00, 1.00}, {0.84, 0.94, 1.00}, {0.60, 0.82, 1.00},
+                         {0.62, 0.84, 1.00}, {0.95, 0.98, 1.00}, -20, 5, 1.8f, 0.50},
+    [SGLyricThemeMoney] = {{1.00, 0.99, 0.86}, {0.80, 0.94, 0.62}, {0.42, 0.82, 0.50},
+                           {0.45, 0.85, 0.50}, {0.88, 0.96, 0.70}, -10, 6, 1.4f, 0.38},
+    [SGLyricThemeBloom] = {{1.00, 0.96, 1.00}, {0.96, 0.78, 0.98}, {0.84, 0.56, 0.92},
+                           {0.86, 0.56, 0.94}, {0.98, 0.84, 1.00}, 12, 5, 1.8f, 0.50},
+    [SGLyricThemeBlood] = {{1.00, 0.90, 0.88}, {1.00, 0.52, 0.48}, {0.90, 0.20, 0.22},
+                           {0.92, 0.20, 0.22}, {1.00, 0.60, 0.56}, 20, 4, 1.5f, 0.44},
+    [SGLyricThemeParty] = {{1.00, 0.94, 0.90}, {1.00, 0.66, 0.72}, {0.92, 0.42, 0.86},
+                           {0.96, 0.46, 0.80}, {1.00, 0.80, 0.88}, -12, 8, 1.2f, 0.32},
+    [SGLyricThemeToxic] = {{0.98, 1.00, 0.86}, {0.84, 0.98, 0.50}, {0.60, 0.90, 0.30},
+                           {0.60, 0.92, 0.30}, {0.90, 1.00, 0.66}, -16, 5, 1.6f, 0.44},
 };
+
+// How far a sung word rises: 4% larger and about a point up, the same on every theme.
+static const CGFloat sg_riseScale = 0.04;
+static const CGFloat sg_risePoints = 1.2;
+// At most this many words give off motes at once; further words keep color, glow and motion.
+static const NSUInteger sg_emitterLimit = 3;
 
 @interface SGLyricPaintRecord : NSObject
 @property (nonatomic) BOOL painted;
@@ -87,23 +64,20 @@ static const SGThemeLook sg_looks[SGLyricThemeCount] = {
 @property (nonatomic, weak) CALayer *shadowLayer;
 @property (nonatomic, strong) id shadowColor;
 @property (nonatomic, weak) CAEmitterLayer *emitter;
+@property (nonatomic) BOOL risen;
+@property (nonatomic) CGFloat lift;
+@property (nonatomic) CGFloat response;
+@property (nonatomic) NSUInteger motion; // generation: a delayed cleanup never touches a newer pass
 @end
 @implementation SGLyricPaintRecord
 @end
 
 static char sg_recordKey;
-static NSString *const sg_motionKey = @"spotifyglass.lyricWordMotion";
-static NSString *const sg_entranceKey = @"spotifyglass.lyricWordEntrance";
-// At most this many words emit particles at once; further words keep color, glow and motion.
-static const NSUInteger sg_emitterLimit = 3;
 static NSHashTable<CAEmitterLayer *> *sg_emitters;
-
-static NSUInteger liveEmitters(void) {
-    NSUInteger live = 0;
-    for (CAEmitterLayer *emitter in sg_emitters.allObjects)
-        if (emitter.birthRate > 0 && emitter.superlayer) live++;
-    return live;
-}
+static NSString *const sg_riseScaleKey = @"spotifyglass.lyricWord.riseScale";
+static NSString *const sg_riseLiftKey = @"spotifyglass.lyricWord.riseLift";
+static NSString *const sg_fallScaleKey = @"spotifyglass.lyricWord.fallScale";
+static NSString *const sg_fallLiftKey = @"spotifyglass.lyricWord.fallLift";
 
 static SGLyricPaintRecord *recordOf(id word, BOOL create) {
     SGLyricPaintRecord *record = objc_getAssociatedObject(word, &sg_recordKey);
@@ -118,8 +92,8 @@ static BOOL themed(SGLyricTheme theme) {
     return theme != SGLyricThemeNone && theme < SGLyricThemeCount;
 }
 
-static UIColor *solid(const CGFloat rgb[3]) {
-    return [UIColor colorWithRed:rgb[0] green:rgb[1] blue:rgb[2] alpha:1];
+static UIColor *solid(const CGFloat rgb[3], CGFloat alpha) {
+    return [UIColor colorWithRed:rgb[0] green:rgb[1] blue:rgb[2] alpha:alpha];
 }
 
 // A vertical gradient tile as tall as the label, so it repeats only sideways. A label draws
@@ -139,7 +113,8 @@ static UIColor *themeFill(SGLyricTheme theme, CGFloat height) {
             look->top[0], look->top[1], look->top[2], 1,
             look->middle[0], look->middle[1], look->middle[2], 1,
             look->bottom[0], look->bottom[1], look->bottom[2], 1};
-        CGFloat locations[3] = {0.20, 0.55, 0.85};
+        // The lyric's own white holds through the upper part of the glyphs.
+        CGFloat locations[3] = {0.30, 0.60, 0.86};
         CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
         CGGradientRef gradient = CGGradientCreateWithColorComponents(space, components, locations, 3);
         CGContextDrawLinearGradient(context.CGContext, gradient, CGPointZero, CGPointMake(0, rows),
@@ -154,43 +129,22 @@ static UIColor *themeFill(SGLyricTheme theme, CGFloat height) {
     return fill;
 }
 
-static UIImage *particleImage(SGParticleShape shape) {
-    static UIImage *images[SGParticleShapeCount];
-    if (images[shape]) return images[shape];
+// One soft round mote: a bright core falling off to nothing, with no visible edge.
+static UIImage *moteImage(void) {
+    static UIImage *image;
+    if (image) return image;
     UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(24, 24)];
-    images[shape] = [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
-        [UIColor.whiteColor setFill];
-        if (shape == SGParticleDot) {
-            CGFloat components[8] = {1, 1, 1, 1, 1, 1, 1, 0};
-            CGFloat locations[2] = {0.25, 1};
-            CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
-            CGGradientRef gradient = CGGradientCreateWithColorComponents(space, components, locations, 2);
-            CGContextDrawRadialGradient(context.CGContext, gradient, CGPointMake(12, 12), 0,
-                                        CGPointMake(12, 12), 12, 0);
-            CGGradientRelease(gradient);
-            CGColorSpaceRelease(space);
-        } else if (shape == SGParticleSpark) {
-            static const CGFloat points[8][2] = {
-                {12, 0}, {14.4, 9.6}, {24, 12}, {14.4, 14.4}, {12, 24}, {9.6, 14.4}, {0, 12}, {9.6, 9.6}};
-            UIBezierPath *path = [UIBezierPath bezierPath];
-            [path moveToPoint:CGPointMake(points[0][0], points[0][1])];
-            for (int i = 1; i < 8; i++) [path addLineToPoint:CGPointMake(points[i][0], points[i][1])];
-            [path closePath];
-            [path fill];
-        } else if (shape == SGParticleHeart) {
-            UIBezierPath *path = [UIBezierPath bezierPath];
-            [path moveToPoint:CGPointMake(12, 21.5)];
-            [path addCurveToPoint:CGPointMake(1.5, 8) controlPoint1:CGPointMake(4.5, 16.5) controlPoint2:CGPointMake(1.5, 12.5)];
-            [path addCurveToPoint:CGPointMake(12, 6) controlPoint1:CGPointMake(1.5, 2.5) controlPoint2:CGPointMake(9.5, 1)];
-            [path addCurveToPoint:CGPointMake(22.5, 8) controlPoint1:CGPointMake(14.5, 1) controlPoint2:CGPointMake(22.5, 2.5)];
-            [path addCurveToPoint:CGPointMake(12, 21.5) controlPoint1:CGPointMake(22.5, 12.5) controlPoint2:CGPointMake(19.5, 16.5)];
-            [path closePath];
-            [path fill];
-        } else {
-            [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(9.5, 3, 5, 18)] fill];
-        }
+    image = [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
+        CGFloat components[12] = {1, 1, 1, 1, 1, 1, 1, 0.35, 1, 1, 1, 0};
+        CGFloat locations[3] = {0, 0.35, 1};
+        CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+        CGGradientRef gradient = CGGradientCreateWithColorComponents(space, components, locations, 3);
+        CGContextDrawRadialGradient(context.CGContext, gradient, CGPointMake(12, 12), 0,
+                                    CGPointMake(12, 12), 12, 0);
+        CGGradientRelease(gradient);
+        CGColorSpaceRelease(space);
     }];
-    return images[shape];
+    return image;
 }
 
 static void paint(id word, id lit, SGLyricTheme theme) {
@@ -215,7 +169,7 @@ static void paint(id word, id lit, SGLyricTheme theme) {
     record.colors = colors;
     record.shadowLayer = layer;
     record.shadowColor = (__bridge id)layer.shadowColor;
-    layer.shadowColor = solid(sg_looks[theme].glow).CGColor;
+    layer.shadowColor = solid(sg_looks[theme].glow, 1).CGColor;
     record.painted = YES;
 }
 
@@ -235,7 +189,7 @@ static void unpaint(id word, id lit) {
     record.shadowColor = nil;
 }
 
-// Stops new particles; the ones in flight fade out, then the layer is removed.
+// Stops new motes; the ones in flight fade out, then the layer is removed.
 static void retire(CAEmitterLayer *emitter) {
     if (!emitter || emitter.birthRate == 0) return;
     emitter.birthRate = 0;
@@ -245,72 +199,78 @@ static void retire(CAEmitterLayer *emitter) {
     });
 }
 
-// Small additive motion on top of the core's own transform. Loops end on a whole cycle.
-static CAAnimation *motion(SGLyricTheme theme, double sung, double limit) {
-    NSString *path = nil;
-    NSArray<NSNumber *> *values = nil;
-    CFTimeInterval duration = 0;
-    float fixedRepeats = 0;
-    BOOL smooth = YES;
-    switch (theme) {
-        case SGLyricThemeFire:
-            path = @"transform.scale.y"; values = @[@0, @0.035, @0.01, @0.045, @0]; duration = 0.55; break;
-        case SGLyricThemeIce:
-            path = @"transform.translation.x"; values = @[@0, @-1.1, @1.1, @-0.8, @0.8, @0];
-            duration = 0.32; fixedRepeats = 2; smooth = NO; break;
-        case SGLyricThemeWater:
-            path = @"transform.translation.y"; values = @[@0, @1.6, @0, @-1.6, @0]; duration = 1.3; break;
-        case SGLyricThemeLove:
-            path = @"transform.scale"; values = @[@0, @0.1, @0.02, @0.07, @0, @0]; duration = 0.85; break;
-        case SGLyricThemeShine:
-            path = @"transform.scale"; values = @[@0, @0.07, @0]; duration = 0.5; fixedRepeats = 1; break;
-        case SGLyricThemeElectric:
-            path = @"transform.translation.x"; values = @[@0, @2, @-2, @1.6, @-1.6, @0.6, @0];
-            duration = 0.2; fixedRepeats = 3; smooth = NO; break;
-        case SGLyricThemeSky:
-            path = @"transform.translation.y"; values = @[@0, @-2.2, @0]; duration = 1.4; break;
-        case SGLyricThemeMoney:
-            path = @"transform.scale"; values = @[@0, @0.06, @0]; duration = 0.45; fixedRepeats = 2; break;
-        case SGLyricThemeBloom:
-            path = @"transform.rotation.z"; values = @[@0, @0.025, @0, @-0.025, @0]; duration = 1.6; break;
-        case SGLyricThemeBlood:
-            path = @"transform.scale"; values = @[@0, @0.05, @0, @0.03, @0]; duration = 1.0; break;
-        case SGLyricThemeParty:
-            path = @"transform.translation.y"; values = @[@0, @-3, @0, @-1.5, @0]; duration = 0.5; break;
-        case SGLyricThemeToxic:
-            path = @"transform.translation.x"; values = @[@0, @1.2, @0, @-1.2, @0]; duration = 0.9; break;
-        default:
-            return nil;
-    }
-    CAKeyframeAnimation *animation = [CAKeyframeAnimation animationWithKeyPath:path];
-    animation.values = values;
-    animation.duration = duration;
+// A critically damped spring (damping ratio 1): it arrives without overshoot. It is additive,
+// so it adds to whatever transform the core sets and two of them blend without a jump.
+static CASpringAnimation *spring(NSString *path, CGFloat change, CGFloat response) {
+    CASpringAnimation *animation = [CASpringAnimation animationWithKeyPath:path];
+    animation.mass = 1;
+    animation.stiffness = (CGFloat)pow(2 * M_PI / response, 2);
+    animation.damping = (CGFloat)(4 * M_PI / response);
+    animation.fromValue = @0;
+    animation.toValue = @(change);
     animation.additive = YES;
-    // A curve through the keyframes instead of straight segments; shivers and shocks stay sharp.
-    if (smooth) animation.calculationMode = kCAAnimationCubic;
-    double cycles = fixedRepeats > 0 ? fixedRepeats : floor(fmin(sung, limit) / duration);
-    animation.repeatCount = (float)fmax(1, cycles);
+    animation.duration = animation.settlingDuration;
+    animation.fillMode = kCAFillModeForwards;
+    animation.removedOnCompletion = NO;
     return animation;
 }
 
-// One short overshoot as the word begins, on every theme whose own motion is not already a pop.
-static CAAnimation *entrance(SGLyricTheme theme) {
-    if (theme == SGLyricThemeShine || theme == SGLyricThemeMoney) return nil;
-    CAKeyframeAnimation *animation = [CAKeyframeAnimation animationWithKeyPath:@"transform.scale"];
-    animation.values = @[@0, @0.075, @-0.012, @0];
-    animation.keyTimes = @[@0, @0.38, @0.74, @1];
-    animation.duration = 0.34;
-    animation.additive = YES;
-    animation.calculationMode = kCAAnimationCubic;
-    return animation;
+static void clearMotion(CALayer *layer) {
+    for (NSString *key in @[sg_riseScaleKey, sg_riseLiftKey, sg_fallScaleKey, sg_fallLiftKey])
+        [layer removeAnimationForKey:key];
+}
+
+static void rise(UIView *view, SGLyricPaintRecord *record, CGFloat lift, CGFloat response) {
+    if (record.risen) return;
+    CALayer *layer = view.layer;
+    clearMotion(layer);
+    record.risen = YES;
+    record.motion++;
+    record.lift = lift;
+    record.response = response;
+    [layer addAnimation:spring(@"transform.scale", sg_riseScale, response) forKey:sg_riseScaleKey];
+    [layer addAnimation:spring(@"transform.translation.y", -lift, response) forKey:sg_riseLiftKey];
+}
+
+// The opposite springs are added on top of the held rise, so settling starts from wherever the
+// word is, even mid-rise. Once both have come to rest their sum is zero and all four are removed.
+static void settleMotion(UIView *view, SGLyricPaintRecord *record) {
+    if (!record.risen) return;
+    record.risen = NO;
+    CALayer *layer = view.layer;
+    // The core clears a word's animations when its line is activated; then there is nothing to undo.
+    if (![layer animationForKey:sg_riseScaleKey]) {
+        clearMotion(layer);
+        return;
+    }
+    CASpringAnimation *scale = spring(@"transform.scale", -sg_riseScale, record.response * 1.25);
+    [layer addAnimation:scale forKey:sg_fallScaleKey];
+    [layer addAnimation:spring(@"transform.translation.y", record.lift, record.response * 1.25) forKey:sg_fallLiftKey];
+    NSUInteger generation = record.motion;
+    __weak UIView *weakView = view;
+    __weak SGLyricPaintRecord *weakRecord = record;
+    CFTimeInterval wait = fmin(3.0, scale.duration) + 0.05;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(wait * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        SGLyricPaintRecord *current = weakRecord;
+        if (current && current.motion == generation && !current.risen) clearMotion(weakView.layer);
+    });
 }
 
 static void quench(id word) {
-    retire(recordOf(word, NO).emitter);
-    if ([word isKindOfClass:UIView.class]) [((UIView *)word).layer removeAnimationForKey:sg_motionKey];
+    SGLyricPaintRecord *record = recordOf(word, NO);
+    retire(record.emitter);
+    if (record && [word isKindOfClass:UIView.class]) settleMotion(word, record);
+}
+
+static NSUInteger liveEmitters(void) {
+    NSUInteger live = 0;
+    for (CAEmitterLayer *emitter in sg_emitters.allObjects)
+        if (emitter.birthRate > 0 && emitter.superlayer) live++;
+    return live;
 }
 
 static void emit(id word, SGLyricTheme theme, double sung, double limit) {
+    (void)sung;
     if (!themed(theme) || ![word isKindOfClass:UIView.class] || !(limit > 0)) return;
     if (UIAccessibilityIsReduceMotionEnabled()) return; // Themed color and glow only.
     UIView *view = word;
@@ -318,49 +278,55 @@ static void emit(id word, SGLyricTheme theme, double sung, double limit) {
     CGFloat width = CGRectGetWidth(bounds), height = CGRectGetHeight(bounds);
     if (!(width >= 1) || !(height >= 1)) return;
     SGLyricPaintRecord *record = recordOf(word, YES);
-    retire(record.emitter);
     const SGThemeLook *look = &sg_looks[theme];
+    // Everything follows the lyric size, so backing lines stay delicate and large text is not sparse.
+    CGFloat size = (CGFloat)fmin(1.4, fmax(0.7, height / 44));
+    rise(view, record, sg_risePoints * size, look->response);
 
-    CAAnimation *pop = entrance(theme);
-    if (pop) [view.layer addAnimation:pop forKey:sg_entranceKey];
-    CAAnimation *animation = motion(theme, sung, limit);
-    if (animation) [view.layer addAnimation:animation forKey:sg_motionKey];
+    // The lyrics clock may pause without another tick; never hold the rise or keep emitting.
+    NSUInteger generation = record.motion;
+    __weak UIView *weakView = view;
+    __weak SGLyricPaintRecord *weakRecord = record;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(limit * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        SGLyricPaintRecord *current = weakRecord;
+        UIView *owner = weakView;
+        if (!current || !owner || current.motion != generation) return;
+        retire(current.emitter);
+        settleMotion(owner, current);
+    });
 
-    UIImage *image = particleImage(look->shape);
+    retire(record.emitter);
+    UIImage *image = moteImage();
     if (!sg_emitters) sg_emitters = [NSHashTable weakObjectsHashTable];
     if (!image || liveEmitters() >= sg_emitterLimit) return;
-    // Particles follow the lyric size, so small backing lines are not buried and large text is not sparse.
-    CGFloat size = (CGFloat)fmin(1.4, fmax(0.7, height / 44));
 
+    // A mote appears small and faint, grows a little and fades: no hard birth, no hard death.
     CAEmitterCell *cell = [CAEmitterCell emitterCell];
     cell.contents = (__bridge id)image.CGImage;
     cell.contentsScale = image.scale;
-    cell.birthRate = look->birthRate * (float)fmin(2.0, fmax(0.6, width / 70));
+    cell.birthRate = look->rate * (float)fmin(2.0, fmax(0.6, width / 70));
     cell.lifetime = look->lifetime;
-    cell.lifetimeRange = look->lifetimeRange;
-    // Direction comes from gravity rather than an emission angle, whose meaning depends on the shape.
-    cell.velocity = look->velocity;
-    cell.velocityRange = look->velocityRange;
+    cell.lifetimeRange = look->lifetime * 0.3f;
+    // Direction comes from the drift rather than an emission angle, whose meaning depends on the shape.
+    cell.velocity = 5;
+    cell.velocityRange = 4;
     cell.emissionRange = (CGFloat)(2 * M_PI);
-    cell.yAcceleration = look->gravity;
-    cell.scale = look->scale * size;
-    cell.scaleRange = look->scaleRange * size;
-    cell.scaleSpeed = look->scaleSpeed * size;
-    cell.alphaRange = 0.25f;
-    cell.spinRange = look->spinRange;
-    cell.alphaSpeed = look->alphaSpeed;
-    cell.greenRange = look->greenRange;
-    cell.color = solid(look->tint).CGColor;
+    cell.yAcceleration = look->drift;
+    cell.scale = 0.07 * size;
+    cell.scaleRange = 0.03 * size;
+    cell.scaleSpeed = 0.06 * size;
+    cell.color = solid(look->mote, 0.7).CGColor;
+    cell.alphaRange = 0.2f;
+    cell.alphaSpeed = -0.7f / look->lifetime;
 
     CAEmitterLayer *emitter = [CAEmitterLayer layer];
     [CATransaction begin];
     [CATransaction setDisableActions:YES];
     emitter.frame = bounds;
     emitter.emitterShape = kCAEmitterLayerRectangle;
-    emitter.emitterPosition = CGPointMake(CGRectGetMidX(bounds),
-        look->area ? CGRectGetMidY(bounds) : CGRectGetMinY(bounds) + height * look->origin);
-    emitter.emitterSize = CGSizeMake(width, look->area ? height * 0.7 : height * 0.2);
-    emitter.renderMode = look->additive ? kCAEmitterLayerAdditive : kCAEmitterLayerUnordered;
+    emitter.emitterPosition = CGPointMake(CGRectGetMidX(bounds), CGRectGetMidY(bounds));
+    emitter.emitterSize = CGSizeMake(width, height * 0.5);
+    emitter.renderMode = kCAEmitterLayerAdditive;
     emitter.seed = arc4random();
     emitter.emitterCells = @[cell];
     // Without this the emitter starts as if it had already been running.
@@ -369,12 +335,6 @@ static void emit(id word, SGLyricTheme theme, double sung, double limit) {
     [CATransaction commit];
     record.emitter = emitter;
     [sg_emitters addObject:emitter];
-
-    // The lyrics clock may pause without another tick; never keep emitting indefinitely.
-    __weak CAEmitterLayer *weakEmitter = emitter;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(limit * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        retire(weakEmitter);
-    });
 }
 
 static void glow(id lit, float opacity) {

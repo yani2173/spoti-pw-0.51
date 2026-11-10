@@ -403,11 +403,17 @@ Words with no usable span (`end <= start`) are treated as 1.5 s long.
 
 `SGLyricEffectPaint.m` is the only UIKit part and uses public API: a pattern-image `textColor`
 on the existing labels (their per-letter wave and lift stay intact), the layer's `shadowColor`,
-a `CAEmitterLayer` and one additive `CAKeyframeAnimation`. Original colors are saved and restored.
+a `CAEmitterLayer` and additive `CASpringAnimation`s. Original colors are saved and restored.
 Reduce Motion keeps color and glow only.
-Each word also gets one 0.34 s overshoot as it starts, loops use cubic keyframe interpolation,
-particle size follows the lyric height, and at most three words emit particles at the same time;
-further words keep their color, glow and motion. All of it is rendered by Core Animation. The effects are off in manual or automatic Light mode:
+The look is intentionally restrained, following the motion guidance in `.agents/skills/`
+(purposeful, brief, no gratuitous movement; critically damped springs unless a gesture carried
+momentum). The lyric's white holds through the top of the glyphs and tints toward the theme hue
+at the base. A sung word rises once, 4% larger and about a point up, on a damping-ratio-1 spring
+and settles with the opposite additive springs, so an early end blends from the current position
+instead of jumping; nothing shakes, bounces or loops. Particles are one soft round mote for every
+theme, a few per second, growing slightly while they fade; a theme differs only in hue, drift
+direction and spring response. Sizes follow the lyric height, at most three words give off motes
+at once, and the glow floor is 0.7 of the envelope. All of it is rendered by Core Animation. The effects are off in manual or automatic Light mode:
 `SGPerformanceSetLightModeObserver` reports the effective mode, and shown words are restored
 immediately. A **Status** row under the switch reports "Unsupported app version", "Off", "Off · Light mode",
 or counts of words seen by the hook, matched to a theme and shown, to tell a disabled policy,
