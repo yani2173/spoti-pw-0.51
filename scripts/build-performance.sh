@@ -6,5 +6,5 @@ mkdir -p "$(dirname "$OUT")"
 xcrun --sdk iphoneos clang -target arm64-apple-ios16.1 -dynamiclib -fobjc-arc -Os \
   -Wall -Wextra -Werror "$ROOT/performance/SGPerformance.m" "$ROOT/performance/SGPerfSettings.m" "$ROOT/performance/SGLyricsRepair.m" "$ROOT/performance/SGLightRendering.m" "$ROOT/performance/SGLyricsTiming.m" "$ROOT/performance/SGLyricsIndex.c" \
   "$ROOT/performance/SGLyricEffects.m" "$ROOT/performance/SGLyricEffectPaint.m" "$ROOT/performance/SGLyricWords.c" \
-  -framework Foundation -framework UIKit -framework QuartzCore -framework MediaPlayer \
+  -framework Foundation -framework UIKit -framework QuartzCore -framework CoreGraphics -framework MediaPlayer \
   -install_name @rpath/SGPerformance051.dylib -o "$OUT"
