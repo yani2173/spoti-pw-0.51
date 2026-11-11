@@ -1,4 +1,5 @@
 #import "SGLyricEffects.h"
+#import "SGLyricGlyphs.h"
 #import <UIKit/UIKit.h>
 #import <QuartzCore/QuartzCore.h>
 #import <objc/runtime.h>
@@ -7,16 +8,12 @@
 // UIKit/Core Animation drawing for sung-word effects. Only public API is used here; the timing
 // policy and the verified 0.51.0 hooks are in SGLyricEffects.m. Nothing in this file runs per
 // frame: text is recolored once, and particles/motion are rendered by Core Animation.
-typedef NS_ENUM(NSInteger, SGParticleShape) {
-    SGParticleDot, SGParticleSpark, SGParticleHeart, SGParticleDrop, SGParticleShapeCount
-};
-
+// The particle artwork of each theme is the vector drawing in SGLyricGlyphs.c.
 typedef struct {
     CGFloat top[3], middle[3], bottom[3]; // text gradient, top to bottom
     CGFloat glow[3];
     CGFloat tint[3];                      // particle color
     float greenRange;
-    SGParticleShape shape;
     BOOL area;                            // spawn over the whole word instead of a thin band
     BOOL additive;
     CGFloat origin;                       // band position, 0 (top) ... 1 (bottom)
@@ -26,58 +23,66 @@ typedef struct {
 } SGThemeLook;
 
 static const SGThemeLook sg_looks[SGLyricThemeCount] = {
-    [SGLyricThemeFire] = {
+    [SGLyricThemeFire] = { // flames lick upward from the lower half of the word
         {1.00, 0.16, 0.05}, {1.00, 0.52, 0.06}, {1.00, 0.89, 0.30}, {1.00, 0.45, 0.10},
-        {1.00, 0.60, 0.15}, 0.25f, SGParticleDot, NO, YES, 0.62,
-        20, 0.85f, 0.30f, -1.1f, 9, 7, -75, 0.20, 0.09, -0.12, 0},
-    [SGLyricThemeIce] = {
+        {1.00, 0.62, 0.18}, 0.25f, NO, YES, 0.62,
+        12, 0.85f, 0.30f, -1.1f, 9, 7, -75, 0.40, 0.14, -0.20, 0.25},
+    [SGLyricThemeIce] = { // snowflakes drift down slowly, turning
         {1.00, 1.00, 1.00}, {0.72, 0.93, 1.00}, {0.36, 0.72, 1.00}, {0.55, 0.85, 1.00},
-        {0.92, 0.97, 1.00}, 0, SGParticleDot, NO, NO, 0.20,
-        11, 1.30f, 0.40f, -0.7f, 6, 4, 22, 0.16, 0.07, 0, 0},
-    [SGLyricThemeWater] = {
+        {0.92, 0.97, 1.00}, 0, NO, NO, 0.20,
+        8, 1.40f, 0.40f, -0.65f, 6, 4, 22, 0.36, 0.12, 0, 1.2},
+    [SGLyricThemeWater] = { // drops fall
         {0.55, 0.90, 1.00}, {0.20, 0.62, 1.00}, {0.08, 0.36, 0.95}, {0.20, 0.60, 1.00},
-        {0.50, 0.78, 1.00}, 0, SGParticleDrop, NO, NO, 0.30,
-        13, 0.60f, 0.15f, -1.5f, 2, 2, 380, 0.42, 0.12, 0, 0},
-    [SGLyricThemeLove] = {
+        {0.50, 0.78, 1.00}, 0, NO, NO, 0.30,
+        11, 0.60f, 0.15f, -1.5f, 2, 2, 380, 0.34, 0.10, 0, 0},
+    [SGLyricThemeLove] = { // hearts float up
         {1.00, 0.62, 0.78}, {1.00, 0.30, 0.52}, {0.96, 0.12, 0.30}, {1.00, 0.25, 0.50},
-        {1.00, 0.35, 0.58}, 0.12f, SGParticleHeart, NO, NO, 0.40,
+        {1.00, 0.35, 0.58}, 0.12f, NO, NO, 0.40,
         6, 1.30f, 0.30f, -0.75f, 8, 6, -38, 0.36, 0.12, 0.08, 0.5},
-    [SGLyricThemeShine] = {
+    [SGLyricThemeShine] = { // sparkles twinkle in place over the word
         {1.00, 1.00, 0.95}, {1.00, 0.90, 0.50}, {1.00, 0.72, 0.18}, {1.00, 0.85, 0.40},
-        {1.00, 0.93, 0.62}, 0, SGParticleSpark, YES, YES, 0.50,
-        11, 0.65f, 0.20f, -1.4f, 4, 4, 0, 0.42, 0.16, -0.55, 2.0},
-    [SGLyricThemeElectric] = {
+        {1.00, 0.93, 0.62}, 0, YES, YES, 0.50,
+        11, 0.65f, 0.20f, -1.4f, 4, 4, 0, 0.44, 0.16, -0.55, 2.0},
+    [SGLyricThemeElectric] = { // bolts snap outward and vanish
         {1.00, 1.00, 0.75}, {0.75, 0.95, 1.00}, {0.45, 0.55, 1.00}, {0.60, 0.80, 1.00},
-        {0.78, 0.93, 1.00}, 0, SGParticleSpark, YES, YES, 0.50,
-        24, 0.26f, 0.10f, -3.2f, 95, 45, 0, 0.26, 0.10, -0.60, 6.0},
-    [SGLyricThemeNight] = {
+        {0.78, 0.93, 1.00}, 0, YES, YES, 0.50,
+        16, 0.28f, 0.10f, -3.0f, 95, 45, 0, 0.42, 0.14, -0.70, 0.6},
+    [SGLyricThemeNight] = { // crescents hang and fade
         {0.86, 0.74, 1.00}, {0.62, 0.45, 1.00}, {0.40, 0.30, 0.90}, {0.60, 0.40, 1.00},
-        {0.72, 0.58, 1.00}, 0, SGParticleDot, YES, YES, 0.50,
-        8, 1.70f, 0.50f, -0.55f, 7, 5, -6, 0.26, 0.10, 0, 0},
-    [SGLyricThemeSky] = {
+        {0.76, 0.64, 1.00}, 0, YES, YES, 0.50,
+        6, 1.70f, 0.50f, -0.55f, 7, 5, -6, 0.34, 0.12, 0, 0.4},
+    [SGLyricThemeSky] = { // small clouds rise
         {1.00, 1.00, 1.00}, {0.74, 0.90, 1.00}, {0.45, 0.74, 1.00}, {0.62, 0.84, 1.00},
-        {0.95, 0.98, 1.00}, 0, SGParticleDot, NO, NO, 0.45,
-        9, 1.50f, 0.40f, -0.6f, 6, 4, -24, 0.24, 0.10, 0.05, 0},
-    [SGLyricThemeMoney] = {
+        {0.95, 0.98, 1.00}, 0, NO, NO, 0.45,
+        6, 1.50f, 0.40f, -0.6f, 6, 4, -24, 0.46, 0.14, 0.05, 0},
+    [SGLyricThemeMoney] = { // banknotes are thrown up, then tumble down
         {1.00, 0.95, 0.55}, {0.62, 0.92, 0.42}, {0.20, 0.78, 0.36}, {0.35, 0.90, 0.40},
-        {1.00, 0.88, 0.40}, 0.10f, SGParticleSpark, YES, YES, 0.50,
-        12, 0.75f, 0.25f, -1.2f, 10, 8, -30, 0.36, 0.14, -0.40, 3.0},
-    [SGLyricThemeBloom] = {
+        {0.56, 0.90, 0.46}, 0.08f, YES, NO, 0.50,
+        9, 1.10f, 0.30f, -0.9f, 30, 14, 70, 0.48, 0.12, 0, 3.0},
+    [SGLyricThemeBloom] = { // blossoms fall, spinning
         {1.00, 0.80, 0.90}, {1.00, 0.52, 0.72}, {0.52, 0.86, 0.46}, {1.00, 0.55, 0.75},
-        {1.00, 0.66, 0.80}, 0.12f, SGParticleDrop, NO, NO, 0.25,
-        8, 1.50f, 0.40f, -0.6f, 10, 6, 26, 0.34, 0.12, 0, 2.5},
-    [SGLyricThemeBlood] = {
+        {1.00, 0.66, 0.80}, 0.12f, NO, NO, 0.25,
+        7, 1.50f, 0.40f, -0.6f, 10, 6, 26, 0.40, 0.12, 0, 2.5},
+    [SGLyricThemeBlood] = { // heavy drops from the foot of the word
         {1.00, 0.42, 0.36}, {0.94, 0.14, 0.14}, {0.70, 0.02, 0.08}, {0.95, 0.10, 0.12},
-        {0.90, 0.08, 0.10}, 0, SGParticleDrop, NO, NO, 0.70,
+        {0.90, 0.08, 0.10}, 0, NO, NO, 0.70,
         7, 0.90f, 0.25f, -0.9f, 1, 1, 150, 0.36, 0.12, 0, 0},
-    [SGLyricThemeParty] = {
+    [SGLyricThemeParty] = { // notes jump out in mixed colors
         {1.00, 0.40, 0.85}, {0.72, 0.50, 1.00}, {0.30, 0.90, 1.00}, {0.85, 0.45, 1.00},
-        {1.00, 0.55, 0.90}, 0.45f, SGParticleSpark, YES, YES, 0.50,
-        18, 0.70f, 0.25f, -1.3f, 45, 25, 60, 0.30, 0.12, -0.30, 5.0},
-    [SGLyricThemeToxic] = {
+        {1.00, 0.55, 0.90}, 0.45f, YES, YES, 0.50,
+        12, 0.80f, 0.25f, -1.2f, 45, 25, 60, 0.44, 0.14, -0.20, 0.6},
+    [SGLyricThemeToxic] = { // bubbles rise and swell
         {0.95, 1.00, 0.45}, {0.62, 0.98, 0.25}, {0.25, 0.82, 0.30}, {0.55, 1.00, 0.25},
-        {0.70, 1.00, 0.35}, 0.10f, SGParticleDot, NO, YES, 0.60,
-        10, 1.30f, 0.40f, -0.7f, 5, 4, -30, 0.26, 0.12, 0.10, 0},
+        {0.70, 1.00, 0.35}, 0.10f, NO, YES, 0.60,
+        9, 1.30f, 0.40f, -0.7f, 5, 4, -30, 0.30, 0.12, 0.12, 0},
+    [SGLyricThemePurple] = { // slow purple haze, swelling as it lifts
+        {0.98, 0.72, 1.00}, {0.74, 0.36, 0.98}, {0.42, 0.14, 0.78}, {0.72, 0.30, 1.00},
+        {0.70, 0.36, 1.00}, 0, YES, YES, 0.50,
+        7, 2.00f, 0.50f, -0.45f, 5, 4, -10, 0.55, 0.20, 0.28, 0},
+    [SGLyricThemeDrip] = { // cut gems flash and fall away
+        {1.00, 1.00, 1.00}, {0.80, 0.95, 1.00}, {0.78, 0.70, 1.00}, {0.80, 0.92, 1.00},
+        {0.86, 0.96, 1.00}, 0, YES, YES, 0.50,
+        9, 0.85f, 0.25f, -1.1f, 12, 8, 40, 0.42, 0.14, -0.15, 1.0},
 };
 
 @interface SGLyricPaintRecord : NSObject
@@ -154,43 +159,57 @@ static UIColor *themeFill(SGLyricTheme theme, CGFloat height) {
     return fill;
 }
 
-static UIImage *particleImage(SGParticleShape shape) {
-    static UIImage *images[SGParticleShapeCount];
-    if (images[shape]) return images[shape];
-    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(24, 24)];
-    images[shape] = [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
-        [UIColor.whiteColor setFill];
-        if (shape == SGParticleDot) {
-            CGFloat components[8] = {1, 1, 1, 1, 1, 1, 1, 0};
-            CGFloat locations[2] = {0.25, 1};
-            CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
-            CGGradientRef gradient = CGGradientCreateWithColorComponents(space, components, locations, 2);
-            CGContextDrawRadialGradient(context.CGContext, gradient, CGPointMake(12, 12), 0,
-                                        CGPointMake(12, 12), 12, 0);
-            CGGradientRelease(gradient);
-            CGColorSpaceRelease(space);
-        } else if (shape == SGParticleSpark) {
-            static const CGFloat points[8][2] = {
-                {12, 0}, {14.4, 9.6}, {24, 12}, {14.4, 14.4}, {12, 24}, {9.6, 14.4}, {0, 12}, {9.6, 9.6}};
-            UIBezierPath *path = [UIBezierPath bezierPath];
-            [path moveToPoint:CGPointMake(points[0][0], points[0][1])];
-            for (int i = 1; i < 8; i++) [path addLineToPoint:CGPointMake(points[i][0], points[i][1])];
-            [path closePath];
-            [path fill];
-        } else if (shape == SGParticleHeart) {
-            UIBezierPath *path = [UIBezierPath bezierPath];
-            [path moveToPoint:CGPointMake(12, 21.5)];
-            [path addCurveToPoint:CGPointMake(1.5, 8) controlPoint1:CGPointMake(4.5, 16.5) controlPoint2:CGPointMake(1.5, 12.5)];
-            [path addCurveToPoint:CGPointMake(12, 6) controlPoint1:CGPointMake(1.5, 2.5) controlPoint2:CGPointMake(9.5, 1)];
-            [path addCurveToPoint:CGPointMake(22.5, 8) controlPoint1:CGPointMake(14.5, 1) controlPoint2:CGPointMake(22.5, 2.5)];
-            [path addCurveToPoint:CGPointMake(12, 21.5) controlPoint1:CGPointMake(22.5, 12.5) controlPoint2:CGPointMake(19.5, 16.5)];
-            [path closePath];
-            [path fill];
-        } else {
-            [[UIBezierPath bezierPathWithOvalInRect:CGRectMake(9.5, 3, 5, 18)] fill];
+// Fills one figure, or for an even-odd drawing the whole path at once so inner figures cut holes.
+static void fillGlyph(const SGGlyphShape *shape) {
+    UIBezierPath *path = [UIBezierPath bezierPath];
+    path.usesEvenOddFillRule = shape->evenOdd;
+    for (size_t i = 0; i < shape->count; i++) {
+        const float *v = shape->ops[i].v;
+        switch (shape->ops[i].kind) {
+            case SGGlyphMove: [path moveToPoint:CGPointMake(v[0], v[1])]; break;
+            case SGGlyphLine: [path addLineToPoint:CGPointMake(v[0], v[1])]; break;
+            case SGGlyphCurve:
+                [path addCurveToPoint:CGPointMake(v[4], v[5]) controlPoint1:CGPointMake(v[0], v[1])
+                        controlPoint2:CGPointMake(v[2], v[3])];
+                break;
+            case SGGlyphClose: [path closePath]; break;
+            case SGGlyphOval:
+                [path appendPath:[UIBezierPath bezierPathWithOvalInRect:CGRectMake(v[0], v[1], v[2], v[3])]];
+                break;
+            default: return;
         }
+        BOOL closed = shape->ops[i].kind == SGGlyphClose || shape->ops[i].kind == SGGlyphOval;
+        if (!closed || shape->evenOdd) continue;
+        [path fill];
+        [path removeAllPoints];
+    }
+    if (shape->evenOdd) [path fill];
+}
+
+// White artwork, rendered once per drawing at the screen's scale; the emitter cell tints it.
+static UIImage *particleImage(SGLyricGlyph glyph) {
+    static UIImage *images[SGLyricGlyphCount];
+    if ((NSUInteger)glyph >= SGLyricGlyphCount) return nil;
+    if (images[glyph]) return images[glyph];
+    const SGGlyphShape *shape = SGLyricGlyphOutline(glyph);
+    CGFloat box = SGLyricGlyphBox;
+    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(box, box)];
+    images[glyph] = [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
+        [UIColor.whiteColor setFill];
+        if (shape) {
+            fillGlyph(shape);
+            return;
+        }
+        CGFloat components[8] = {1, 1, 1, 1, 1, 1, 1, 0};
+        CGFloat locations[2] = {0.25, 1};
+        CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+        CGGradientRef gradient = CGGradientCreateWithColorComponents(space, components, locations, 2);
+        CGPoint center = CGPointMake(box / 2, box / 2);
+        CGContextDrawRadialGradient(context.CGContext, gradient, center, 0, center, box / 2, 0);
+        CGGradientRelease(gradient);
+        CGColorSpaceRelease(space);
     }];
-    return images[shape];
+    return images[glyph];
 }
 
 static void paint(id word, id lit, SGLyricTheme theme) {
@@ -279,6 +298,10 @@ static CAAnimation *motion(SGLyricTheme theme, double sung, double limit) {
             path = @"transform.translation.y"; values = @[@0, @-3, @0, @-1.5, @0]; duration = 0.5; break;
         case SGLyricThemeToxic:
             path = @"transform.translation.x"; values = @[@0, @1.2, @0, @-1.2, @0]; duration = 0.9; break;
+        case SGLyricThemePurple: // a slow, leaning sway
+            path = @"transform.rotation.z"; values = @[@0, @0.03, @0, @-0.03, @0]; duration = 2.0; break;
+        case SGLyricThemeDrip:
+            path = @"transform.scale"; values = @[@0, @0.07, @0]; duration = 0.5; fixedRepeats = 2; break;
         default:
             return nil;
     }
@@ -295,7 +318,7 @@ static CAAnimation *motion(SGLyricTheme theme, double sung, double limit) {
 
 // One short overshoot as the word begins, on every theme whose own motion is not already a pop.
 static CAAnimation *entrance(SGLyricTheme theme) {
-    if (theme == SGLyricThemeShine || theme == SGLyricThemeMoney) return nil;
+    if (theme == SGLyricThemeShine || theme == SGLyricThemeMoney || theme == SGLyricThemeDrip) return nil;
     CAKeyframeAnimation *animation = [CAKeyframeAnimation animationWithKeyPath:@"transform.scale"];
     animation.values = @[@0, @0.075, @-0.012, @0];
     animation.keyTimes = @[@0, @0.38, @0.74, @1];
@@ -326,7 +349,7 @@ static void emit(id word, SGLyricTheme theme, double sung, double limit) {
     CAAnimation *animation = motion(theme, sung, limit);
     if (animation) [view.layer addAnimation:animation forKey:sg_motionKey];
 
-    UIImage *image = particleImage(look->shape);
+    UIImage *image = particleImage(SGLyricGlyphForTheme(theme));
     if (!sg_emitters) sg_emitters = [NSHashTable weakObjectsHashTable];
     if (!image || liveEmitters() >= sg_emitterLimit) return;
     // Particles follow the lyric size, so small backing lines are not buried and large text is not sparse.

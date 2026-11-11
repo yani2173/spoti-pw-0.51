@@ -53,8 +53,7 @@ static const SGThemedWord sg_words[] = {
     {"sun", SGLyricThemeShine}, {"sunny", SGLyricThemeShine}, {"sunshine", SGLyricThemeShine},
     {"sunlight", SGLyricThemeShine}, {"sunrise", SGLyricThemeShine}, {"light", SGLyricThemeShine},
     {"bright", SGLyricThemeShine}, {"gold", SGLyricThemeShine}, {"golden", SGLyricThemeShine},
-    {"glow", SGLyricThemeShine}, {"gleam", SGLyricThemeShine}, {"diamond", SGLyricThemeShine},
-    {"crystal", SGLyricThemeShine}, {"jewel", SGLyricThemeShine}, {"sparkle", SGLyricThemeShine},
+    {"glow", SGLyricThemeShine}, {"gleam", SGLyricThemeShine}, {"crystal", SGLyricThemeShine}, {"sparkle", SGLyricThemeShine},
     {"glitter", SGLyricThemeShine}, {"shimmer", SGLyricThemeShine}, {"dazzle", SGLyricThemeShine},
     {"radiant", SGLyricThemeShine}, {"magic", SGLyricThemeShine}, {"halo", SGLyricThemeShine},
     {"angel", SGLyricThemeShine}, {"heaven", SGLyricThemeShine}, {"rainbow", SGLyricThemeShine},
@@ -198,7 +197,7 @@ static const SGThemedWord sg_words[] = {
     {"payday", SGLyricThemeMoney}, {"paid", SGLyricThemeMoney}, {"luxury", SGLyricThemeMoney},
     {"expensive", SGLyricThemeMoney}, {"price", SGLyricThemeMoney}, {"pricey", SGLyricThemeMoney},
     {"bucks", SGLyricThemeMoney}, {"profit", SGLyricThemeMoney}, {"loot", SGLyricThemeMoney},
-    {"bling", SGLyricThemeMoney}, {"casino", SGLyricThemeMoney}, {"greed", SGLyricThemeMoney},
+    {"casino", SGLyricThemeMoney}, {"greed", SGLyricThemeMoney},
     {"greedy", SGLyricThemeMoney}, {"moolah", SGLyricThemeMoney}, {"dough", SGLyricThemeMoney},
 
     // Bloom.
@@ -258,6 +257,77 @@ static const SGThemedWord sg_words[] = {
     {"overdose", SGLyricThemeToxic}, {"dope", SGLyricThemeToxic}, {"whiskey", SGLyricThemeToxic},
     {"vodka", SGLyricThemeToxic}, {"tequila", SGLyricThemeToxic}, {"wine", SGLyricThemeToxic},
     {"liquor", SGLyricThemeToxic}, {"alcohol", SGLyricThemeToxic}, {"cocaine", SGLyricThemeToxic},
+
+    // Hip-hop vocabulary, tuned on A$AP Rocky's catalog: the words his songs lean on, as
+    // single keywords. No lyric lines are stored.
+    {"purple", SGLyricThemePurple}, {"sizzurp", SGLyricThemePurple}, {"syrup", SGLyricThemePurple},
+    {"drank", SGLyricThemePurple}, {"codeine", SGLyricThemePurple},
+    {"promethazine", SGLyricThemePurple}, {"haze", SGLyricThemePurple}, {"hazy", SGLyricThemePurple},
+    {"kush", SGLyricThemePurple}, {"trippy", SGLyricThemePurple}, {"lsd", SGLyricThemePurple},
+    {"psychedelic", SGLyricThemePurple}, {"hallucinate", SGLyricThemePurple},
+    {"hallucination", SGLyricThemePurple}, {"lucid", SGLyricThemePurple},
+    {"trill", SGLyricThemePurple}, {"wavy", SGLyricThemePurple}, {"grape", SGLyricThemePurple},
+    {"amethyst", SGLyricThemePurple}, {"indigo", SGLyricThemePurple},
+
+    {"fashion", SGLyricThemeDrip}, {"designer", SGLyricThemeDrip}, {"couture", SGLyricThemeDrip},
+    {"runway", SGLyricThemeDrip}, {"vogue", SGLyricThemeDrip}, {"model", SGLyricThemeDrip},
+    {"style", SGLyricThemeDrip}, {"stylish", SGLyricThemeDrip}, {"swag", SGLyricThemeDrip},
+    {"fresh", SGLyricThemeDrip}, {"jiggy", SGLyricThemeDrip}, {"pretty", SGLyricThemeDrip},
+    {"dapper", SGLyricThemeDrip}, {"classy", SGLyricThemeDrip}, {"fancy", SGLyricThemeDrip},
+    {"elegant", SGLyricThemeDrip}, {"gorgeous", SGLyricThemeDrip}, {"glam", SGLyricThemeDrip},
+    {"glamour", SGLyricThemeDrip}, {"glamorous", SGLyricThemeDrip}, {"boujee", SGLyricThemeDrip},
+    {"bougie", SGLyricThemeDrip}, {"fleek", SGLyricThemeDrip}, {"sauce", SGLyricThemeDrip},
+    {"saucy", SGLyricThemeDrip}, {"killa", SGLyricThemeDrip}, {"flacko", SGLyricThemeDrip},
+    {"rocky", SGLyricThemeDrip}, {"asap", SGLyricThemeDrip}, {"dior", SGLyricThemeDrip},
+    {"prada", SGLyricThemeDrip}, {"gucci", SGLyricThemeDrip}, {"fendi", SGLyricThemeDrip},
+    {"versace", SGLyricThemeDrip}, {"chanel", SGLyricThemeDrip}, {"givenchy", SGLyricThemeDrip},
+    {"balenciaga", SGLyricThemeDrip}, {"margiela", SGLyricThemeDrip}, {"balmain", SGLyricThemeDrip},
+    {"armani", SGLyricThemeDrip}, {"burberry", SGLyricThemeDrip}, {"vuitton", SGLyricThemeDrip},
+    {"hermes", SGLyricThemeDrip}, {"goyard", SGLyricThemeDrip}, {"cartier", SGLyricThemeDrip},
+    {"rolex", SGLyricThemeDrip}, {"rollie", SGLyricThemeDrip}, {"raf", SGLyricThemeDrip},
+    {"vlone", SGLyricThemeDrip}, {"bape", SGLyricThemeDrip}, {"diamond", SGLyricThemeDrip},
+    {"jewel", SGLyricThemeDrip}, {"jewelry", SGLyricThemeDrip}, {"bling", SGLyricThemeDrip},
+    {"chain", SGLyricThemeDrip}, {"pendant", SGLyricThemeDrip}, {"necklace", SGLyricThemeDrip},
+    {"bracelet", SGLyricThemeDrip}, {"carat", SGLyricThemeDrip}, {"karat", SGLyricThemeDrip},
+    {"vvs", SGLyricThemeDrip}, {"silk", SGLyricThemeDrip}, {"silky", SGLyricThemeDrip},
+    {"satin", SGLyricThemeDrip}, {"velvet", SGLyricThemeDrip}, {"leather", SGLyricThemeDrip},
+    {"mink", SGLyricThemeDrip}, {"cashmere", SGLyricThemeDrip}, {"linen", SGLyricThemeDrip},
+    {"denim", SGLyricThemeDrip}, {"sundress", SGLyricThemeDrip}, {"babushka", SGLyricThemeDrip},
+    {"tailor", SGLyricThemeDrip}, {"tuxedo", SGLyricThemeDrip}, {"closet", SGLyricThemeDrip},
+    {"wardrobe", SGLyricThemeDrip}, {"outfit", SGLyricThemeDrip},
+
+    {"lord", SGLyricThemeShine}, {"god", SGLyricThemeShine}, {"praise", SGLyricThemeShine},
+    {"pray", SGLyricThemeShine}, {"bless", SGLyricThemeShine}, {"blessing", SGLyricThemeShine},
+    {"amen", SGLyricThemeShine}, {"church", SGLyricThemeShine}, {"gospel", SGLyricThemeShine},
+    {"hallelujah", SGLyricThemeShine}, {"goldie", SGLyricThemeShine},
+
+    {"bands", SGLyricThemeMoney}, {"racks", SGLyricThemeMoney}, {"stacks", SGLyricThemeMoney},
+    {"commas", SGLyricThemeMoney}, {"guap", SGLyricThemeMoney}, {"peso", SGLyricThemeMoney},
+    {"euro", SGLyricThemeMoney}, {"yen", SGLyricThemeMoney}, {"cheddar", SGLyricThemeMoney},
+    {"benjamins", SGLyricThemeMoney}, {"franklins", SGLyricThemeMoney},
+    {"wallet", SGLyricThemeMoney}, {"hustle", SGLyricThemeMoney}, {"baller", SGLyricThemeMoney},
+    {"tycoon", SGLyricThemeMoney}, {"mogul", SGLyricThemeMoney},
+
+    {"riot", SGLyricThemeBlood}, {"glock", SGLyricThemeBlood}, {"choppa", SGLyricThemeBlood},
+    {"chopper", SGLyricThemeBlood}, {"trigger", SGLyricThemeBlood}, {"shoot", SGLyricThemeBlood},
+    {"shooter", SGLyricThemeBlood}, {"shotgun", SGLyricThemeBlood}, {"pistol", SGLyricThemeBlood},
+    {"rifle", SGLyricThemeBlood}, {"ammo", SGLyricThemeBlood}, {"slaughter", SGLyricThemeBlood}, {"opps", SGLyricThemeBlood},
+
+    {"molly", SGLyricThemeToxic}, {"xanax", SGLyricThemeToxic}, {"xan", SGLyricThemeToxic},
+    {"xanny", SGLyricThemeToxic}, {"percocet", SGLyricThemeToxic}, {"perc", SGLyricThemeToxic},
+    {"blunt", SGLyricThemeToxic}, {"stoned", SGLyricThemeToxic}, {"faded", SGLyricThemeToxic},
+    {"henny", SGLyricThemeToxic}, {"hennessy", SGLyricThemeToxic}, {"gin", SGLyricThemeToxic},
+    {"bong", SGLyricThemeToxic}, {"shrooms", SGLyricThemeToxic}, {"ganja", SGLyricThemeToxic},
+    {"reefer", SGLyricThemeToxic}, {"marijuana", SGLyricThemeToxic},
+    {"cannabis", SGLyricThemeToxic},
+
+    {"turnt", SGLyricThemeParty}, {"mosh", SGLyricThemeParty}, {"moshpit", SGLyricThemeParty},
+    {"rowdy", SGLyricThemeParty}, {"hype", SGLyricThemeParty}, {"vibe", SGLyricThemeParty},
+    {"wild", SGLyricThemeParty}, {"banger", SGLyricThemeParty}, {"speaker", SGLyricThemeParty},
+
+    {"sandman", SGLyricThemeNight}, {"casket", SGLyricThemeNight}, {"hearse", SGLyricThemeNight},
+    {"skyline", SGLyricThemeSky}, {"pilot", SGLyricThemeSky}, {"rooftop", SGLyricThemeSky},
+    {"freezer", SGLyricThemeIce}, {"fridge", SGLyricThemeIce},
 };
 
 // Unrelated words which the inflection rules would otherwise reduce to a keyword.
@@ -265,6 +335,7 @@ static const char *const sg_unrelated[] = {
     "staring", "stared", "stares", "number", "numbers", "numbered", "sober", "mister", "misters",
     "liter", "liters", "dimes", "crowed", "icing", "divest", "gravely", "holes",
     "warning", "winding", "winded", "painting", "painter", "singe", "singed",
+    "litter", "litters", "littered", "littering", "saucer", "saucers", "bluntly",
 };
 
 static bool unrelated(const char *word, size_t length) {
@@ -288,7 +359,8 @@ static bool endsWith(const char *word, size_t length, const char *suffix) {
     return length > size && memcmp(word + length - size, suffix, size) == 0;
 }
 
-// Tries the word with `drop` trailing characters removed, and optionally with a restored "e".
+// Tries the word with `drop` trailing characters removed, and optionally with a restored "e"
+// or without a doubled final consonant.
 static SGLyricTheme stem(const char *word, size_t length, size_t drop, bool restoreE) {
     char base[SG_WORD_MAX + 1];
     size_t size = length - drop;
@@ -296,7 +368,9 @@ static SGLyricTheme stem(const char *word, size_t length, size_t drop, bool rest
     SGLyricTheme theme = lookup(base, size);
     if (theme != SGLyricThemeNone || !restoreE) return theme;
     base[size] = 'e';
-    return lookup(base, size + 1);
+    if ((theme = lookup(base, size + 1)) != SGLyricThemeNone) return theme;
+    // A doubled final consonant: "drippin'", "swagger", "clubbing".
+    return size >= 4 && base[size - 1] == base[size - 2] ? lookup(base, size - 1) : SGLyricThemeNone;
 }
 
 static SGLyricTheme classify(const char *word, size_t length) {
@@ -341,6 +415,8 @@ SGLyricTheme SGLyricThemeForWord(const char *utf8, size_t length) {
         } else if (byte >= 0x80) {
             return SGLyricThemeNone; // Another script or an accented letter: not an English keyword.
         }
+        // Stylized spellings: "A$AP", "L$D", "ca$h". A leading or trailing sign stays a separator.
+        if (byte == '$' && size && ((next | 0x20) >= 'a' && (next | 0x20) <= 'z')) byte = 's';
         if (byte >= 'A' && byte <= 'Z') byte = (unsigned char)(byte - 'A' + 'a');
         if ((byte >= 'a' && byte <= 'z') || (apostrophe && size)) {
             if (size == SG_WORD_MAX) return SGLyricThemeNone;

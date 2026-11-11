@@ -14,7 +14,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPILER = os.environ.get("CC", "cc")
-NONE, FIRE, ICE, WATER, LOVE, SHINE, ELECTRIC, NIGHT, SKY, MONEY, BLOOM, BLOOD, PARTY, TOXIC = range(14)
+(NONE, FIRE, ICE, WATER, LOVE, SHINE, ELECTRIC, NIGHT, SKY, MONEY, BLOOM, BLOOD, PARTY, TOXIC,
+ PURPLE, DRIP) = range(16)
 
 
 class Phase(C.Structure):
@@ -49,7 +50,7 @@ class LyricWordTests(unittest.TestCase):
     def test_each_theme_has_keywords(self):
         expected = {"fire": FIRE, "ice": ICE, "rain": WATER, "love": LOVE, "star": SHINE,
                     "thunder": ELECTRIC, "midnight": NIGHT, "sky": SKY, "money": MONEY, "flower": BLOOM,
-                    "blood": BLOOD, "dance": PARTY, "poison": TOXIC}
+                    "blood": BLOOD, "dance": PARTY, "poison": TOXIC, "purple": PURPLE, "fashion": DRIP}
         for word, theme in expected.items():
             self.assertEqual(self.theme(word), theme, word)
 
@@ -111,11 +112,58 @@ class LyricWordTests(unittest.TestCase):
 
     def test_look_alikes_of_keywords_stay_plain(self):
         for word in ("staring", "stared", "stares", "number", "numbers", "sober", "mister", "liter",
-                     "icing", "huge", "crowd", "gravel", "surgery", "bowl", "pray", "camp", "little",
+                     "icing", "huge", "crowd", "gravel", "surgery", "bowl", "tray", "camp", "little",
                      "sweet", "current", "honest", "remain", "coin", "swing", "sting", "boring"):
             self.assertEqual(self.theme(word), NONE, word)
         self.assertEqual(self.theme("devil"), FIRE, "an exact keyword wins over a shorter one inside it")
         self.assertEqual(self.theme("star"), SHINE)
+
+    def test_hip_hop_vocabulary(self):
+        cases = {"purple": PURPLE, "swag": DRIP, "sizzurp": PURPLE, "codeine": PURPLE, "hazy": PURPLE,
+                 "trill": PURPLE, "trippy": PURPLE, "wavy": PURPLE, "kush": PURPLE,
+                 "fashion": DRIP, "killa": DRIP, "designer": DRIP, "dior": DRIP, "prada": DRIP,
+                 "raf": DRIP, "margiela": DRIP, "pretty": DRIP, "flacko": DRIP, "rocky": DRIP,
+                 "jiggy": DRIP, "sundress": DRIP, "babushka": DRIP, "diamonds": DRIP, "chains": DRIP,
+                 "vvs": DRIP, "freshest": DRIP, "styling": DRIP, "models": DRIP, "hermes": DRIP,
+                 "praise": SHINE, "lord": SHINE, "pray": SHINE, "prayer": SHINE, "blessed": SHINE,
+                 "blessings": SHINE, "goldie": SHINE, "god": SHINE,
+                 "peso": MONEY, "pesos": MONEY, "bands": MONEY, "racks": MONEY, "guap": MONEY,
+                 "hustler": MONEY, "hustlin'": MONEY,
+                 "riot": BLOOD, "glock": BLOOD, "choppa": BLOOD, "shooters": BLOOD, "opps": BLOOD,
+                 "molly": TOXIC, "xans": TOXIC, "blunts": TOXIC, "henny": TOXIC, "faded": TOXIC,
+                 "turnt": PARTY, "moshing": PARTY, "vibes": PARTY, "wildin'": PARTY, "hyped": PARTY,
+                 "sandman": NIGHT, "casket": NIGHT, "skyline": SKY, "freezer": ICE}
+        for word, theme in cases.items():
+            self.assertEqual(self.theme(word), theme, word)
+        # An exact keyword still wins over a new, shorter base.
+        self.assertEqual(self.theme("hyper"), ELECTRIC)
+        # Plural-only slang does not theme its ordinary singular.
+        for word in ("band", "rack", "stack", "comma", "stone", "fade", "miles", "lean", "rap",
+                     "raped", "design", "swagless", "saucer", "saucers", "bluntly", "prey"):
+            self.assertEqual(self.theme(word), NONE, word)
+
+    def test_dollar_sign_spellings(self):
+        self.assertEqual(self.theme("A$AP"), DRIP)
+        self.assertEqual(self.theme("L$D"), PURPLE)
+        self.assertEqual(self.theme("ca$h"), MONEY)
+        self.assertEqual(self.theme("FA$HION"), DRIP)
+        self.assertEqual(self.theme("$tar"), NONE, "a leading sign is a separator")
+        self.assertEqual(self.theme("love$"), LOVE, "so is a trailing one")
+        self.assertEqual(self.theme("fire$5"), FIRE)
+        for text in ("$", "$$$", "$100", "a$", "ki$$"):
+            self.assertEqual(self.theme(text), NONE, text)
+
+    def test_doubled_final_consonants(self):
+        cases = {"drippin'": WATER, "dripping": WATER, "dripped": WATER, "swagger": DRIP,
+                 "swaggin": DRIP, "clubbing": PARTY, "drummer": PARTY, "clapped": PARTY,
+                 "gunned": BLOOD, "warring": BLOOD, "jetting": SKY, "sobbing": WATER,
+                 "wetter": WATER, "littest": FIRE, "dimmer": NIGHT, "fuelled": FIRE}
+        for word, theme in cases.items():
+            self.assertEqual(self.theme(word), theme, word)
+        for word in ("litter", "littered", "winning", "shinning", "planning", "summer", "dinner",
+                     "better", "letter", "running", "getting", "seeing", "freeing", "herring",
+                     "scarred", "slimmer", "butter", "inner", "telling", "calling"):
+            self.assertEqual(self.theme(word), NONE, word)
 
     def test_only_whole_words_match(self):
         for word in ("start", "started", "nice", "hotel", "sunday", "season", "search", "seen",

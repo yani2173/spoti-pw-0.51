@@ -7,8 +7,9 @@ been removed. Git history and original upstream tags preserve their provenance.
 ## Layout
 
 - `performance/`: editable Objective-C add-on, including Light mode and settings integration.
-  `SGLyricWords.c` (keywords/timing), `SGLyricEffects.m` (verified hooks) and
-  `SGLyricEffectPaint.m` (UIKit drawing, iOS build only) implement sung-word effects.
+  `SGLyricWords.c` (keywords/timing), `SGLyricGlyphs.c` (particle drawings as vector data),
+  `SGLyricEffects.m` (verified hooks) and `SGLyricEffectPaint.m` (UIKit drawing, iOS build only)
+  implement sung-word effects.
 - `scripts/official-release.sh`: packages the pinned kit and optional add-on into a supplied IPA.
 - `scripts/build-performance.sh`: builds the add-on with Xcode.
 - `scripts/prepare-official-kit.py`, `verify-official-build.py`, `sg_macho.py`: input,

@@ -363,8 +363,14 @@ advance, rapid next/previous, first play and cached replay with Light mode off o
 ## Sung-word effects
 
 **Mod Settings → Lyrics → Word effects** (default on, `spotifyglass.performance.lyricWordEffects`)
-themes matching English words while they are sung. `SGLyricWords.c` maps a token to one of thirteen
-themes: fire, ice, water, love, shine, electric, night, sky, money, bloom, blood, party, toxic.
+themes matching English words while they are sung. `SGLyricWords.c` maps a token to one of fifteen
+themes: fire, ice, water, love, shine, electric, night, sky, money, bloom, blood, party, toxic,
+purple (haze, lean, psychedelia) and drip (fashion and jewelry).
+The table includes hip-hop vocabulary chosen around A$AP Rocky's catalog: fashion houses and
+fabrics, jewelry, "purple"/"swag"/"trill", money slang ("bands", "racks", "peso"), praise words
+and party/street slang. Only single keywords are stored, never lyric lines, and they apply to every
+artist. A dollar sign between letters reads as an "s" ("A$AP", "L$D", "ca$h"), and a doubled final
+consonant before an ending is undone ("drippin'", "swagger", "clubbing").
 A short list of unrelated look-alikes ("staring", "number", "warning") is excluded explicitly. Case, surrounding punctuation, a
 possessive and common inflections are ignored; only whole words match ("star", not "start").
 Other scripts and accented words are left alone. The keyword table is the place to add words.
@@ -405,6 +411,12 @@ Words with no usable span (`end <= start`) are treated as 1.5 s long.
 on the existing labels (their per-letter wave and lift stay intact), the layer's `shadowColor`,
 a `CAEmitterLayer` and one additive `CAKeyframeAnimation`. Original colors are saved and restored.
 Reduce Motion keeps color and glow only.
+The particles are small drawings matched to the theme instead of generic dots: flames, snowflakes,
+drops, hearts, four-pointed sparkles, lightning bolts, crescents, clouds, banknotes, blossoms,
+eighth notes, bubbles and cut gems; purple words shed soft haze. `SGLyricGlyphs.c` holds them as
+portable vector data in a 24-unit box (lines, curves and ovals, with cut-outs for detail such as
+the flame's core or the gem's facets). The painter fills each one once into a white image that the
+emitter cell tints, so the number of images, emitters and cells per word is the same as before.
 Each word also gets one 0.34 s overshoot as it starts, loops use cubic keyframe interpolation,
 particle size follows the lyric height, and at most three words emit particles at the same time;
 further words keep their color, glow and motion. All of it is rendered by Core Animation. The effects are off in manual or automatic Light mode:
@@ -416,7 +428,8 @@ The preference is read at startup and followed through defaults changes, includi
 reset and import.
 
 `tests/test_lyric_words.py` compiles the C and checks keywords, inflections, false positives,
-other scripts and the timing phases. `tests/lyric-effects-main.m` runs the real hooks against
+other scripts and the timing phases. `tests/test_lyric_glyphs.py` checks that every theme has a
+drawing made of closed figures inside the box. `tests/lyric-effects-main.m` runs the real hooks against
 stand-ins with the verified ABI and a recording painter: replays after seeks, glow hand-off,
 settle, the setting, Light mode at startup and live, off-main calls, an unsupported ABI and weak
 ownership. Neither renders anything. Colors, glow, particles, motion and their cost on a phone

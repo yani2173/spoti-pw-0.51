@@ -21,11 +21,14 @@ typedef enum {
     SGLyricThemeBlood,
     SGLyricThemeParty,
     SGLyricThemeToxic,
+    SGLyricThemePurple, // haze, lean and psychedelia
+    SGLyricThemeDrip,   // fashion and jewelry
     SGLyricThemeCount
 } SGLyricTheme;
 
 // One lyric token as UTF-8. Case, surrounding punctuation, a possessive and common English
 // inflections are ignored. Matching is on whole words only: "star" never matches "start".
+// A dollar sign between letters reads as an "s", as in stylized hip-hop spellings ("A$AP").
 SGLyricTheme SGLyricThemeForWord(const char *utf8, size_t length);
 
 typedef struct {
