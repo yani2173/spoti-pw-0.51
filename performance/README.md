@@ -412,11 +412,13 @@ on the existing labels (their per-letter wave and lift stay intact), the layer's
 a `CAEmitterLayer` and one additive `CAKeyframeAnimation`. Original colors are saved and restored.
 Reduce Motion keeps color and glow only.
 The particles are small drawings matched to the theme instead of generic dots: flames, snowflakes,
-drops, hearts, four-pointed sparkles, lightning bolts, crescents, clouds, banknotes, blossoms,
-eighth notes, bubbles and cut gems; purple words shed soft haze. `SGLyricGlyphs.c` holds them as
-portable vector data in a 24-unit box (lines, curves and ovals, with cut-outs for detail such as
-the flame's core or the gem's facets). The painter fills each one once into a white image that the
-emitter cell tints, so the number of images, emitters and cells per word is the same as before.
+water and blood drops, hearts, four-pointed sparkles, lightning bolts, crescents with stars, clouds,
+waving banknotes, blossoms, beamed notes, bubbles and cut gems; purple words shed soft haze.
+`SGLyricGlyphs.c` holds them as portable vector data in a 24-unit box: each drawing is a few layers
+of lines, curves and ovals, every layer with its own top-to-bottom gradient and opacity (a base
+shape, lighter inner shapes, white highlights, shaded gem facets) over a soft halo. The painter
+renders each drawing once into an image with its own colors, so the emitter cell's tint is white
+(except for the haze) and the number of images, emitters and cells per word is the same as before.
 Each word also gets one 0.34 s overshoot as it starts, loops use cubic keyframe interpolation,
 particle size follows the lyric height, and at most three words emit particles at the same time;
 further words keep their color, glow and motion. All of it is rendered by Core Animation. The effects are off in manual or automatic Light mode:
@@ -429,7 +431,7 @@ reset and import.
 
 `tests/test_lyric_words.py` compiles the C and checks keywords, inflections, false positives,
 other scripts and the timing phases. `tests/test_lyric_glyphs.py` checks that every theme has a
-drawing made of closed figures inside the box. `tests/lyric-effects-main.m` runs the real hooks against
+drawing made of painted, closed figures inside the box, with a halo and shading. `tests/lyric-effects-main.m` runs the real hooks against
 stand-ins with the verified ABI and a recording painter: replays after seeks, glow hand-off,
 settle, the setting, Light mode at startup and live, off-main calls, an unsupported ABI and weak
 ownership. Neither renders anything. Colors, glow, particles, motion and their cost on a phone

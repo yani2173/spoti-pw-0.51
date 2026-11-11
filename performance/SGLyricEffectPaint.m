@@ -12,7 +12,7 @@
 typedef struct {
     CGFloat top[3], middle[3], bottom[3]; // text gradient, top to bottom
     CGFloat glow[3];
-    CGFloat tint[3];                      // particle color
+    CGFloat tint[3];                      // multiplies the artwork; white keeps its own colors
     float greenRange;
     BOOL area;                            // spawn over the whole word instead of a thin band
     BOOL additive;
@@ -25,55 +25,55 @@ typedef struct {
 static const SGThemeLook sg_looks[SGLyricThemeCount] = {
     [SGLyricThemeFire] = { // flames lick upward from the lower half of the word
         {1.00, 0.16, 0.05}, {1.00, 0.52, 0.06}, {1.00, 0.89, 0.30}, {1.00, 0.45, 0.10},
-        {1.00, 0.62, 0.18}, 0.25f, NO, YES, 0.62,
+        {1.00, 1.00, 1.00}, 0.25f, NO, YES, 0.62,
         12, 0.85f, 0.30f, -1.1f, 9, 7, -75, 0.40, 0.14, -0.20, 0.25},
     [SGLyricThemeIce] = { // snowflakes drift down slowly, turning
         {1.00, 1.00, 1.00}, {0.72, 0.93, 1.00}, {0.36, 0.72, 1.00}, {0.55, 0.85, 1.00},
-        {0.92, 0.97, 1.00}, 0, NO, NO, 0.20,
+        {1.00, 1.00, 1.00}, 0, NO, NO, 0.20,
         8, 1.40f, 0.40f, -0.65f, 6, 4, 22, 0.36, 0.12, 0, 1.2},
     [SGLyricThemeWater] = { // drops fall
         {0.55, 0.90, 1.00}, {0.20, 0.62, 1.00}, {0.08, 0.36, 0.95}, {0.20, 0.60, 1.00},
-        {0.50, 0.78, 1.00}, 0, NO, NO, 0.30,
+        {1.00, 1.00, 1.00}, 0, NO, NO, 0.30,
         11, 0.60f, 0.15f, -1.5f, 2, 2, 380, 0.34, 0.10, 0, 0},
     [SGLyricThemeLove] = { // hearts float up
         {1.00, 0.62, 0.78}, {1.00, 0.30, 0.52}, {0.96, 0.12, 0.30}, {1.00, 0.25, 0.50},
-        {1.00, 0.35, 0.58}, 0.12f, NO, NO, 0.40,
+        {1.00, 1.00, 1.00}, 0.12f, NO, NO, 0.40,
         6, 1.30f, 0.30f, -0.75f, 8, 6, -38, 0.36, 0.12, 0.08, 0.5},
     [SGLyricThemeShine] = { // sparkles twinkle in place over the word
         {1.00, 1.00, 0.95}, {1.00, 0.90, 0.50}, {1.00, 0.72, 0.18}, {1.00, 0.85, 0.40},
-        {1.00, 0.93, 0.62}, 0, YES, YES, 0.50,
+        {1.00, 1.00, 1.00}, 0, YES, YES, 0.50,
         11, 0.65f, 0.20f, -1.4f, 4, 4, 0, 0.44, 0.16, -0.55, 2.0},
     [SGLyricThemeElectric] = { // bolts snap outward and vanish
         {1.00, 1.00, 0.75}, {0.75, 0.95, 1.00}, {0.45, 0.55, 1.00}, {0.60, 0.80, 1.00},
-        {0.78, 0.93, 1.00}, 0, YES, YES, 0.50,
+        {1.00, 1.00, 1.00}, 0, YES, YES, 0.50,
         16, 0.28f, 0.10f, -3.0f, 95, 45, 0, 0.42, 0.14, -0.70, 0.6},
     [SGLyricThemeNight] = { // crescents hang and fade
         {0.86, 0.74, 1.00}, {0.62, 0.45, 1.00}, {0.40, 0.30, 0.90}, {0.60, 0.40, 1.00},
-        {0.76, 0.64, 1.00}, 0, YES, YES, 0.50,
+        {1.00, 1.00, 1.00}, 0, YES, YES, 0.50,
         6, 1.70f, 0.50f, -0.55f, 7, 5, -6, 0.34, 0.12, 0, 0.4},
     [SGLyricThemeSky] = { // small clouds rise
         {1.00, 1.00, 1.00}, {0.74, 0.90, 1.00}, {0.45, 0.74, 1.00}, {0.62, 0.84, 1.00},
-        {0.95, 0.98, 1.00}, 0, NO, NO, 0.45,
+        {1.00, 1.00, 1.00}, 0, NO, NO, 0.45,
         6, 1.50f, 0.40f, -0.6f, 6, 4, -24, 0.46, 0.14, 0.05, 0},
     [SGLyricThemeMoney] = { // banknotes are thrown up, then tumble down
         {1.00, 0.95, 0.55}, {0.62, 0.92, 0.42}, {0.20, 0.78, 0.36}, {0.35, 0.90, 0.40},
-        {0.56, 0.90, 0.46}, 0.08f, YES, NO, 0.50,
+        {1.00, 1.00, 1.00}, 0.08f, YES, NO, 0.50,
         9, 1.10f, 0.30f, -0.9f, 30, 14, 70, 0.48, 0.12, 0, 3.0},
     [SGLyricThemeBloom] = { // blossoms fall, spinning
         {1.00, 0.80, 0.90}, {1.00, 0.52, 0.72}, {0.52, 0.86, 0.46}, {1.00, 0.55, 0.75},
-        {1.00, 0.66, 0.80}, 0.12f, NO, NO, 0.25,
+        {1.00, 1.00, 1.00}, 0.12f, NO, NO, 0.25,
         7, 1.50f, 0.40f, -0.6f, 10, 6, 26, 0.40, 0.12, 0, 2.5},
     [SGLyricThemeBlood] = { // heavy drops from the foot of the word
         {1.00, 0.42, 0.36}, {0.94, 0.14, 0.14}, {0.70, 0.02, 0.08}, {0.95, 0.10, 0.12},
-        {0.90, 0.08, 0.10}, 0, NO, NO, 0.70,
+        {1.00, 1.00, 1.00}, 0, NO, NO, 0.70,
         7, 0.90f, 0.25f, -0.9f, 1, 1, 150, 0.36, 0.12, 0, 0},
     [SGLyricThemeParty] = { // notes jump out in mixed colors
         {1.00, 0.40, 0.85}, {0.72, 0.50, 1.00}, {0.30, 0.90, 1.00}, {0.85, 0.45, 1.00},
-        {1.00, 0.55, 0.90}, 0.45f, YES, YES, 0.50,
+        {1.00, 1.00, 1.00}, 0.45f, YES, YES, 0.50,
         12, 0.80f, 0.25f, -1.2f, 45, 25, 60, 0.44, 0.14, -0.20, 0.6},
     [SGLyricThemeToxic] = { // bubbles rise and swell
         {0.95, 1.00, 0.45}, {0.62, 0.98, 0.25}, {0.25, 0.82, 0.30}, {0.55, 1.00, 0.25},
-        {0.70, 1.00, 0.35}, 0.10f, NO, YES, 0.60,
+        {1.00, 1.00, 1.00}, 0.10f, NO, YES, 0.60,
         9, 1.30f, 0.40f, -0.7f, 5, 4, -30, 0.30, 0.12, 0.12, 0},
     [SGLyricThemePurple] = { // slow purple haze, swelling as it lifts
         {0.98, 0.72, 1.00}, {0.74, 0.36, 0.98}, {0.42, 0.14, 0.78}, {0.72, 0.30, 1.00},
@@ -81,7 +81,7 @@ static const SGThemeLook sg_looks[SGLyricThemeCount] = {
         7, 2.00f, 0.50f, -0.45f, 5, 4, -10, 0.55, 0.20, 0.28, 0},
     [SGLyricThemeDrip] = { // cut gems flash and fall away
         {1.00, 1.00, 1.00}, {0.80, 0.95, 1.00}, {0.78, 0.70, 1.00}, {0.80, 0.92, 1.00},
-        {0.86, 0.96, 1.00}, 0, YES, YES, 0.50,
+        {1.00, 1.00, 1.00}, 0, YES, YES, 0.50,
         9, 0.85f, 0.25f, -1.1f, 12, 8, 40, 0.42, 0.14, -0.15, 1.0},
 };
 
@@ -159,10 +159,41 @@ static UIColor *themeFill(SGLyricTheme theme, CGFloat height) {
     return fill;
 }
 
-// Fills one figure, or for an even-odd drawing the whole path at once so inner figures cut holes.
-static void fillGlyph(const SGGlyphShape *shape) {
+// One layer's figures, clipped and filled with its top-to-bottom gradient.
+static void fillFigures(CGContextRef context, UIBezierPath *path, BOOL evenOdd, const float *rgb, CGFloat alpha) {
+    if (!path.empty && rgb) {
+        CGFloat components[8] = {rgb[0], rgb[1], rgb[2], alpha, rgb[3], rgb[4], rgb[5], alpha};
+        CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+        CGGradientRef gradient = CGGradientCreateWithColorComponents(space, components, NULL, 2);
+        CGContextSaveGState(context);
+        path.usesEvenOddFillRule = evenOdd;
+        [path addClip];
+        CGContextDrawLinearGradient(context, gradient, CGPointZero, CGPointMake(0, SGLyricGlyphBox),
+            kCGGradientDrawsBeforeStartLocation | kCGGradientDrawsAfterEndLocation);
+        CGContextRestoreGState(context);
+        CGGradientRelease(gradient);
+        CGColorSpaceRelease(space);
+    }
+    [path removeAllPoints];
+}
+
+// A round fade from the color at the given opacity in the middle of the box to nothing at the radius.
+static void fillHalo(CGContextRef context, const CGFloat rgb[3], CGFloat alpha, CGFloat solid, CGFloat radius) {
+    CGFloat components[8] = {rgb[0], rgb[1], rgb[2], alpha, rgb[0], rgb[1], rgb[2], 0};
+    CGFloat locations[2] = {solid, 1};
+    CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+    CGGradientRef gradient = CGGradientCreateWithColorComponents(space, components, locations, 2);
+    CGPoint center = CGPointMake(SGLyricGlyphBox / 2.0, SGLyricGlyphBox / 2.0);
+    CGContextDrawRadialGradient(context, gradient, center, 0, center, radius, 0);
+    CGGradientRelease(gradient);
+    CGColorSpaceRelease(space);
+}
+
+static void drawGlyph(CGContextRef context, const SGGlyphShape *shape) {
     UIBezierPath *path = [UIBezierPath bezierPath];
-    path.usesEvenOddFillRule = shape->evenOdd;
+    const float *paint = NULL;
+    BOOL evenOdd = NO;
+    CGFloat alpha = 1;
     for (size_t i = 0; i < shape->count; i++) {
         const float *v = shape->ops[i].v;
         switch (shape->ops[i].kind) {
@@ -172,42 +203,51 @@ static void fillGlyph(const SGGlyphShape *shape) {
                 [path addCurveToPoint:CGPointMake(v[4], v[5]) controlPoint1:CGPointMake(v[0], v[1])
                         controlPoint2:CGPointMake(v[2], v[3])];
                 break;
-            case SGGlyphClose: [path closePath]; break;
+            case SGGlyphClose:
+                [path closePath];
+                if (!evenOdd) fillFigures(context, path, NO, paint, alpha);
+                break;
             case SGGlyphOval:
                 [path appendPath:[UIBezierPath bezierPathWithOvalInRect:CGRectMake(v[0], v[1], v[2], v[3])]];
+                if (!evenOdd) fillFigures(context, path, NO, paint, alpha);
                 break;
+            case SGGlyphLayer:
+            case SGGlyphLayerCut:
+                fillFigures(context, path, evenOdd, paint, alpha);
+                paint = v;
+                evenOdd = shape->ops[i].kind == SGGlyphLayerCut;
+                break;
+            case SGGlyphAlpha:
+                fillFigures(context, path, evenOdd, paint, alpha);
+                alpha = v[0];
+                break;
+            case SGGlyphGlow: {
+                const CGFloat rgb[3] = {v[0], v[1], v[2]};
+                fillHalo(context, rgb, v[3], 0, SGLyricGlyphBox / 2.0 + SGLyricGlyphMargin);
+                break;
+            }
             default: return;
         }
-        BOOL closed = shape->ops[i].kind == SGGlyphClose || shape->ops[i].kind == SGGlyphOval;
-        if (!closed || shape->evenOdd) continue;
-        [path fill];
-        [path removeAllPoints];
     }
-    if (shape->evenOdd) [path fill];
+    fillFigures(context, path, evenOdd, paint, alpha);
 }
 
-// White artwork, rendered once per drawing at the screen's scale; the emitter cell tints it.
+// Rendered once per drawing at the screen's scale. The artwork carries its own colors; the
+// emitter cell only varies them. The haze puff is white and takes the theme's tint.
+static const CGFloat sg_canvas = SGLyricGlyphBox + 2 * SGLyricGlyphMargin;
+
 static UIImage *particleImage(SGLyricGlyph glyph) {
     static UIImage *images[SGLyricGlyphCount];
     if ((NSUInteger)glyph >= SGLyricGlyphCount) return nil;
     if (images[glyph]) return images[glyph];
     const SGGlyphShape *shape = SGLyricGlyphOutline(glyph);
-    CGFloat box = SGLyricGlyphBox;
-    UIGraphicsImageRenderer *renderer = [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(box, box)];
+    UIGraphicsImageRenderer *renderer =
+        [[UIGraphicsImageRenderer alloc] initWithSize:CGSizeMake(sg_canvas, sg_canvas)];
     images[glyph] = [renderer imageWithActions:^(UIGraphicsImageRendererContext *context) {
-        [UIColor.whiteColor setFill];
-        if (shape) {
-            fillGlyph(shape);
-            return;
-        }
-        CGFloat components[8] = {1, 1, 1, 1, 1, 1, 1, 0};
-        CGFloat locations[2] = {0.25, 1};
-        CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
-        CGGradientRef gradient = CGGradientCreateWithColorComponents(space, components, locations, 2);
-        CGPoint center = CGPointMake(box / 2, box / 2);
-        CGContextDrawRadialGradient(context.CGContext, gradient, center, 0, center, box / 2, 0);
-        CGGradientRelease(gradient);
-        CGColorSpaceRelease(space);
+        CGContextTranslateCTM(context.CGContext, SGLyricGlyphMargin, SGLyricGlyphMargin);
+        static const CGFloat white[3] = {1, 1, 1};
+        if (shape) drawGlyph(context.CGContext, shape);
+        else fillHalo(context.CGContext, white, 1, 0.25, SGLyricGlyphBox / 2.0);
     }];
     return images[glyph];
 }
@@ -353,7 +393,8 @@ static void emit(id word, SGLyricTheme theme, double sung, double limit) {
     if (!sg_emitters) sg_emitters = [NSHashTable weakObjectsHashTable];
     if (!image || liveEmitters() >= sg_emitterLimit) return;
     // Particles follow the lyric size, so small backing lines are not buried and large text is not sparse.
-    CGFloat size = (CGFloat)fmin(1.4, fmax(0.7, height / 44));
+    // The looks give sizes for the drawing itself; the image is larger by its halo margin.
+    CGFloat size = (CGFloat)fmin(1.4, fmax(0.7, height / 44)) * sg_canvas / SGLyricGlyphBox;
 
     CAEmitterCell *cell = [CAEmitterCell emitterCell];
     cell.contents = (__bridge id)image.CGImage;
