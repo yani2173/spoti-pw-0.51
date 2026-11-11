@@ -88,8 +88,8 @@ Light mode during Low Power Mode or serious/critical thermal pressure. Effects r
 saving ends and the phone has cooled to its normal thermal state; a manual Light mode choice stays
 on. The **Status** row shows the current mode and reason. Both switches apply live and persist.
 **Mod Settings → Lyrics → Word effects** (on by default) themes matching words while they are
-sung: fire, ice, water, love, shine, electric, night, sky, money, bloom, blood, party and toxic words get a soft tint, a matching glow,
-a gentle lift and a few small particles such as hearts, snowflakes, drops or sparkles. Light mode turns them off; Reduce Motion keeps only the colors.
+sung: fire, ice, water, love, shine, electric, night, sky, money, bloom, blood, party, toxic, purple and drip words get a soft tint, a matching glow,
+a gentle lift and a few small particles drawn for the mod, such as flames, snow crystals, cut stones or double cups. The vocabulary includes hip-hop words chosen around A$AP Rocky's catalogue (fashion houses, jewelry, lean, "A$AP" itself). Light mode turns them off; Reduce Motion keeps only the colors.
 The bottom of Mod Settings also has **Modified by Yani**; tap it to open https://yaniminchev.eu.
 
 The add-on is described in [performance/README.md](performance/README.md), including the ABI evidence

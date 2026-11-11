@@ -363,11 +363,18 @@ advance, rapid next/previous, first play and cached replay with Light mode off o
 ## Sung-word effects
 
 **Mod Settings → Lyrics → Word effects** (default on, `spotifyglass.performance.lyricWordEffects`)
-themes matching English words while they are sung. `SGLyricWords.c` maps a token to one of thirteen
-themes: fire, ice, water, love, shine, electric, night, sky, money, bloom, blood, party, toxic.
+themes matching English words while they are sung. `SGLyricWords.c` maps a token to one of fifteen
+themes: fire, ice, water, love, shine, electric, night, sky, money, bloom, blood, party, toxic,
+purple (lean, haze, "trill") and drip (fashion houses, jewelry, style).
 A short list of unrelated look-alikes ("staring", "number", "warning") is excluded explicitly. Case, surrounding punctuation, a
 possessive and common inflections are ignored; only whole words match ("star", not "start").
 Other scripts and accented words are left alone. The keyword table is the place to add words.
+
+The table has a hip-hop section chosen around A$AP Rocky's catalogue. It holds single words only
+(brand names, slang, recurring imagery, the names "A$AP", "Rocky", "Flacko" and "Harlem"); no lyric
+text is stored and nothing is keyed to a particular track. A `$` beside a letter is read as an "s",
+so "A$AP", "L$D" and "PE$O" match while "$100" does not. "drip" moved from water to drip. These
+words match in every song, not only his: "lean" or "drank" in another artist's lyric is tinted too.
 
 The original 0.51.0 core already draws each word in its own view. Verified in the pinned binary:
 
@@ -411,12 +418,17 @@ momentum). The lyric's white holds through the top of the glyphs and tints towar
 at the base. A sung word rises once, 4% larger and about a point up, on a damping-ratio-1 spring
 and settles with the opposite additive springs, so an early end blends from the current position
 instead of jumping; nothing shakes, bounces or loops. Particles are sparse (a few per second),
-small, soft-edged and grow slightly while they fade. A theme has one glyph, and it is the system's own SF Symbol
-rather than a hand-drawn shape: `heart.fill`, `snowflake`, `drop.fill` (water and blood),
-`flame.fill`, `sparkle`, `bolt.fill`, `moon.fill`, `cloud.fill`, `dollarsign`, `leaf.fill`,
-`music.note` and `circle` (toxic). Each is rendered once, flat white with a faint halo, into a
-cached 40-point bitmap that the emitter tints and shows at about 8 points with trilinear
-filtering; a missing symbol falls back to a plain mote. The particle count is unchanged. Sizes follow the lyric height, at most three words give off motes
+small, soft-edged and grow slightly while they fade. A theme has one glyph, drawn for this mod
+instead of taken from SF Symbols: a flame with a hollow heart, a twelve-blade snow crystal, a drop
+with a highlight, a heart, a pair of glints, a bolt, a crescent holding a star, a cloud, a banknote,
+a five-petal blossom, a sharp drop with a second one (blood), beamed notes, bubbles (toxic), a
+double cup (purple) and a brilliant-cut stone (drip). `SGLyricGlyphs.c` holds each outline as text
+in a subset of the SVG path syntax (absolute `M`, `L`, `C`, `Z` in a 40-unit box, even-odd fill) with
+a portable walker that rejects anything malformed or out of the box. `SGLyricEffectPaint.m` turns
+the outline into a `CGPath` and renders it once per theme: white with a faint halo, losing up to
+30% of its alpha toward the bottom so it reads as lit from above, into a cached 40-point bitmap
+that the emitter tints and shows at about 9.5 points with trilinear filtering. A rejected outline
+falls back to a plain mote. Emission rates are unchanged. Sizes follow the lyric height, at most three words give off motes
 at once, and the glow floor is 0.7 of the envelope. All of it is rendered by Core Animation. The effects are off in manual or automatic Light mode:
 `SGPerformanceSetLightModeObserver` reports the effective mode, and shown words are restored
 immediately. A **Status** row under the switch reports "Unsupported app version", "Off", "Off · Light mode",
@@ -426,7 +438,9 @@ The preference is read at startup and followed through defaults changes, includi
 reset and import.
 
 `tests/test_lyric_words.py` compiles the C and checks keywords, inflections, false positives,
-other scripts and the timing phases. `tests/lyric-effects-main.m` runs the real hooks against
+the `$` rule, other scripts and the timing phases, and that every theme has a distinct, well-formed
+outline that fits the box with room for its halo. The outlines were looked at as SVG in a desktop
+browser while drawing them; that is not the Core Graphics rendering on a phone. `tests/lyric-effects-main.m` runs the real hooks against
 stand-ins with the verified ABI and a recording painter: replays after seeks, glow hand-off,
 settle, the setting, Light mode at startup and live, off-main calls, an unsupported ABI and weak
 ownership. Neither renders anything. Colors, glow, particles, motion and their cost on a phone
