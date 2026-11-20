@@ -161,14 +161,14 @@ int main(int argc, const char **argv) {
         check(statusIs(@"On \u00b7 2 words seen, 1 matched, 1 shown"), "the status counts matched and shown words");
         [view glowAt:1500];
         check(emits == 1 && near(emittedSung, 0.5) && near(emittedLimit, 1.5), "particles start once with a bounded lifetime");
-        check(near(lastGlow, 0.9), "the themed glow follows the word");
+        check(near(lastGlow, 0.7), "the themed glow follows the word");
         NSInteger glowWrites = glows;
         for (int i = 0; i < 200; i++) [view glowAt:1500];
         check(paints == 1 && emits == 1 && glows == glowWrites && view.nativeGlows == 203,
               "a paused clock repeats no drawing work");
         view.coreGlow = 0.3;
         [view glowAt:1500];
-        check(glows == glowWrites + 1 && near(lastGlow, 0.9), "the themed glow is reapplied after the core writes its own");
+        check(glows == glowWrites + 1 && near(lastGlow, 0.7), "the themed glow is reapplied after the core writes its own");
         view.coreGlow = 0.95;
         [view glowAt:1500];
         check(near(lastGlow, 0.95), "a stronger core glow is kept");

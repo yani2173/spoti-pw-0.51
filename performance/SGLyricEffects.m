@@ -119,7 +119,8 @@ static void update(id view, SGLyricEffectState *state, double time, BOOL coreWro
     }
     // The core writes its own opacity only when its cached value changes; write after it then,
     // and otherwise only when the themed envelope moved.
-    float glow = fmaxf((float)coreGlow(view), 0.9f * phase.glow);
+    // A soft halo rather than a neon one; the core's own setting can still ask for more.
+    float glow = fmaxf((float)coreGlow(view), 0.7f * phase.glow);
     if (coreWroteGlow || fabsf(glow - state.glow) > 0.004f) {
         state.glow = glow;
         sg_painter.glow(lit, glow);
